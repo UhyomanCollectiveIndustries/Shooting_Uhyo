@@ -74,13 +74,14 @@ public class Player extends Entity {
     private void shoot(boolean focus) {
         int dmg = 10;
         if (focus) {
-            newBullets.add(new PlayerBullet(x, y - 10, 0, -15, dmg * 2));
-            newBullets.add(new PlayerBullet(x - 3, y - 10, 0, -15, dmg * 2));
-            newBullets.add(new PlayerBullet(x + 3, y - 10, 0, -15, dmg * 2));
+            // フォーカス時: 集中した5連射（ダメージは通常と同じ）
+            for (int i = -2; i <= 2; i++) {
+                newBullets.add(new PlayerBullet(x + i * 2, y - 10, 0, -15, dmg));
+            }
         } else {
             int ways = getWayCount();
             double baseSpeed = 12.0;
-            double spread = Math.toRadians(10);
+            double spread = Math.toRadians(8);
             for (int i = 0; i < ways; i++) {
                 double angle = -Math.PI / 2;
                 if (ways > 1) {
@@ -90,15 +91,43 @@ public class Player extends Entity {
                 double vy = Math.sin(angle) * baseSpeed;
                 newBullets.add(new PlayerBullet(x, y - 5, vx, vy, dmg));
             }
+            // パワーに応じてサイドオプション弾を追加
+            addSideOptions(dmg);
+        }
+    }
+
+    // サイドから斜め上に撃つオプション弾（パワーが高いほど増える）
+    private void addSideOptions(int dmg) {
+        if (power < 100) return;
+        double spd = 11.0;
+        if (power >= 100) {
+            // 左右から斜め上
+            newBullets.add(new PlayerBullet(x - 15, y - 5, -spd * 0.17, -spd * 0.98, dmg));
+            newBullets.add(new PlayerBullet(x + 15, y - 5,  spd * 0.17, -spd * 0.98, dmg));
+        }
+        if (power >= 200) {
+            // さらに外側
+            newBullets.add(new PlayerBullet(x - 25, y,     -spd * 0.34, -spd * 0.94, dmg));
+            newBullets.add(new PlayerBullet(x + 25, y,      spd * 0.34, -spd * 0.94, dmg));
+        }
+        if (power >= 300) {
+            // さらに外側
+            newBullets.add(new PlayerBullet(x - 35, y,     -spd * 0.50, -spd * 0.87, dmg));
+            newBullets.add(new PlayerBullet(x + 35, y,      spd * 0.50, -spd * 0.87, dmg));
+        }
+        if (power >= 400) {
+            // 最大パワー: さらに2本追加
+            newBullets.add(new PlayerBullet(x - 45, y + 5, -spd * 0.64, -spd * 0.77, dmg));
+            newBullets.add(new PlayerBullet(x + 45, y + 5,  spd * 0.64, -spd * 0.77, dmg));
         }
     }
 
     private int getWayCount() {
-        if (power < 100) return 2;
-        if (power < 200) return 3;
-        if (power < 300) return 4;
-        if (power < 400) return 5;
-        return 6;
+        if (power < 100) return 3;
+        if (power < 200) return 5;
+        if (power < 300) return 7;
+        if (power < 400) return 9;
+        return 12;
     }
 
     public boolean isInvincible() { return invincibleFrames > 0; }

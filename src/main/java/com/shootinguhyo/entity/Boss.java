@@ -13,10 +13,10 @@ public class Boss extends Entity {
     public enum Phase { PHASE1, SPELL1, SPELL2, SPELL3, DEFEATED }
 
     private Phase phase = Phase.PHASE1;
-    private int phase1Hp = 500;
-    private int spell1Hp = 400;
-    private int spell2Hp = 400;
-    private int spell3Hp = 600;
+    private int phase1Hp = 5000;
+    private int spell1Hp = 4000;
+    private int spell2Hp = 4000;
+    private int spell3Hp = 6000;
     private int currentHp;
     private int maxHp;
 
@@ -162,6 +162,10 @@ public class Boss extends Entity {
 
     public void takeDamage(int dmg) {
         if (phase == Phase.DEFEATED) return;
+        // スペルカード中は被ダメを80%カット
+        if (phase == Phase.SPELL1 || phase == Phase.SPELL2 || phase == Phase.SPELL3) {
+            dmg = (int)(dmg * 0.2);
+        }
         currentHp -= dmg;
         if (currentHp < 0) currentHp = 0;
     }

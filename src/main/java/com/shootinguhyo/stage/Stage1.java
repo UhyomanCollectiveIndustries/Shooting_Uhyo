@@ -22,7 +22,7 @@ public class Stage1 implements Stage {
     private void spawnEnemyRow(List<Enemy> enemies, int count) {
         for (int i = 0; i < count; i++) {
             double x = 60.0 + (260.0 / (count + 1)) * (i + 1);
-            enemies.add(new Enemy(x, -20, 30, 200));
+            enemies.add(new Enemy(x, -20, 150, 200));
         }
     }
 
@@ -31,7 +31,7 @@ public class Stage1 implements Stage {
             {192, -20}, {130, -60}, {254, -60}, {192, -100}
         };
         for (int i = 0; i < Math.min(count, positions.length); i++) {
-            enemies.add(new Enemy(positions[i][0], positions[i][1], 30, 200));
+            enemies.add(new Enemy(positions[i][0], positions[i][1], 150, 200));
         }
     }
 

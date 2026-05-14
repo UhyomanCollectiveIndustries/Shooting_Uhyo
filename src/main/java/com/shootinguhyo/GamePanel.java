@@ -451,7 +451,7 @@ public class GamePanel extends JPanel implements Runnable {
 
         g.setFont(new Font("SansSerif", Font.PLAIN, 16));
         g.setColor(new Color(200, 150, 255));
-        String sub = "\u5e7b\u60f3\u306e\u5996\u7cbe";
+        String sub = "";
         fm = g.getFontMetrics();
         g.drawString(sub, (PANEL_WIDTH - fm.stringWidth(sub)) / 2, 185);
 
