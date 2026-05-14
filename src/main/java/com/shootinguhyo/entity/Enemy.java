@@ -8,12 +8,28 @@ import java.awt.geom.Path2D;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Enemy：通常敵キャラクター。
+ *
+ * 【役割】
+ *  - 画面上から下へ波打つようにゆっくり進入してくる雑魚キャラ
+ *  - 一定周期で全方位弾(RadialPattern)を撃つ
+ *  - HPが0になると倒され、アイテムとスコアをドロップ
+ *
+ * 【動き方の仕組み】
+ *  - y を毎フレーム+0.8で下に進める(縦方向はゆっくり等速)
+ *  - x = startX + sin(frame * 0.03) * 40 で左右に揺れる
+ *    → サイン波を使うことで滑らかな往復運動を表現できる(ゲームでは頻出パターン)
+ *
+ * 【protectedの意味】
+ *  サブクラスからアクセスできる。今は継承していないが拡張しやすいよう公開度をゆるめている。
+ */
 public class Enemy extends Entity {
-    protected int hp;
-    protected int maxHp;
-    protected int score;
-    protected int frame = 0;
-    protected double startX;
+    protected int hp;       // 残り体力
+    protected int maxHp;    // 最大体力(HPバー表示などに使える)
+    protected int score;    // 倒した時のスコア
+    protected int frame = 0;     // 出現後の経過フレーム
+    protected double startX;     // 横揺れの中心x座標
     protected List<EnemyBullet> newBullets = new ArrayList<>();
 
     public Enemy(double x, double y, int hp, int score) {
@@ -24,20 +40,28 @@ public class Enemy extends Entity {
         this.startX = x;
     }
 
+    /**
+     * 敵の1フレーム更新。
+     * 移動と弾発射、画面外チェックを行う。
+     */
     @Override
     public void update() {
         frame++;
-        y += 0.8;
-        x = startX + Math.sin(frame * 0.03) * 40;
+        y += 0.8;                                       // 下方向にゆっくり進む
+        x = startX + Math.sin(frame * 0.03) * 40;       // 左右にサイン波で揺れる
 
+        // 90フレームに1回、45フレーム目のタイミングで弾を撃つ
+        // frame % 90 == 45 とすることで「途中の決まったタイミング」になる
         if (frame % 90 == 45 && hp > 0) {
             RadialPattern pattern = new RadialPattern(8, 2.0, frame * 0.1);
             newBullets.addAll(pattern.generate(x, y, EnemyBullet.BulletSize.SMALL, new Color(200, 100, 255)));
         }
 
+        // 画面下を抜けたら消滅
         if (y > 500) active = false;
     }
 
+    /** ダメージを受ける処理。HPが0以下になったら消滅。 */
     public void takeDamage(int dmg) {
         hp -= dmg;
         if (hp <= 0) {
@@ -46,6 +70,7 @@ public class Enemy extends Entity {
         }
     }
 
+    /** 撃った弾を取り出し、内部リストをクリアする(Playerと同じ設計)。 */
     public List<EnemyBullet> getAndClearNewBullets() {
         List<EnemyBullet> bullets = new ArrayList<>(newBullets);
         newBullets.clear();
@@ -56,14 +81,18 @@ public class Enemy extends Entity {
     public int getScore() { return score; }
     public int getHp() { return hp; }
 
+    /**
+     * 敵の見た目を菱形で描画。
+     * 内側にも小さい菱形を描いて立体感を出している。
+     */
     @Override
     public void draw(Graphics2D g) {
         int size = 10;
         Path2D diamond = new Path2D.Double();
-        diamond.moveTo(x, y - size);
-        diamond.lineTo(x + size, y);
-        diamond.lineTo(x, y + size);
-        diamond.lineTo(x - size, y);
+        diamond.moveTo(x, y - size);      // 上
+        diamond.lineTo(x + size, y);      // 右
+        diamond.lineTo(x, y + size);      // 下
+        diamond.lineTo(x - size, y);      // 左
         diamond.closePath();
 
         g.setColor(new Color(150, 50, 220));
@@ -71,6 +100,7 @@ public class Enemy extends Entity {
         g.setColor(new Color(200, 100, 255));
         g.draw(diamond);
 
+        // 内側の菱形(明るい色)
         int is = 5;
         Path2D inner = new Path2D.Double();
         inner.moveTo(x, y - is);

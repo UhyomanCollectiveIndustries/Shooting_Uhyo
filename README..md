@@ -16,7 +16,7 @@
 - ゲームはWindows、Mac、Linuxでプレイできます。  
 - ゲームのバグや不具合があった場合は、開発者に報告してください。  
 ### 開発者情報  
-- 開発者: UhyomanCollectiveIndustries  
+- 開発者: UhyomanCollectiveIndustries/Me1td0wn76  
 
 ### how to play & build  
 1. Clone the repository:  
