@@ -13,13 +13,30 @@ package com.shootinguhyo;
  *  - switch文で網羅的に分岐できるため、状態遷移の見通しが良くなる。
  *
  * 【それぞれの意味】
- *  TITLE      : タイトル画面（Enter押下待ち）
- *  PLAYING    : 通常ステージプレイ中
- *  BOSS_FIGHT : ボス戦中
- *  PAUSED     : 一時停止中
- *  GAME_OVER  : 残機0でゲームオーバー画面
- *  CLEAR      : ボスを倒してステージクリア画面
+ *  TITLE             : タイトル画面（Enter押下待ち）
+ *  CHARACTER_SELECT  : キャラクター選択画面
+ *  OPTIONS           : オプション設定画面
+ *  DIALOG            : ボス戦前後の会話シーン
+ *  PLAYING           : 通常ステージプレイ中
+ *  BOSS_FIGHT        : ボス戦中
+ *  BOSS_DEFEAT       : ボス撃破後の演出中
+ *  PAUSED            : 一時停止中
+ *  STAGE_CLEAR       : ステージクリア画面(次ステージへの繋ぎ)
+ *  GAME_OVER         : 残機0でゲームオーバー画面
+ *  CLEAR             : ボスを倒してステージクリア画面(既存) / 互換用
+ *  ENDING            : 全ステージクリア後のエンディング
  */
 public enum GameState {
-    TITLE, PLAYING, BOSS_FIGHT, PAUSED, GAME_OVER, CLEAR
+    TITLE,
+    CHARACTER_SELECT,
+    OPTIONS,
+    DIALOG,
+    PLAYING,
+    BOSS_FIGHT,
+    BOSS_DEFEAT,
+    PAUSED,
+    STAGE_CLEAR,
+    GAME_OVER,
+    CLEAR,
+    ENDING
 }

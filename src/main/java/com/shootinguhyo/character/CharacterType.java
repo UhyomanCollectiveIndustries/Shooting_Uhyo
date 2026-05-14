@@ -9,15 +9,15 @@ package com.shootinguhyo.character;
  *  switch等で型安全に分岐したい場合に使う。
  *
  * 【既存実装との対応】
- *  REIMU_LIKE  -> ReimuLikeCharacter
- *  MARISA_LIKE -> MarisaLikeCharacter
+ *  UHYOMAN   -> Uhyoman
+ *  UHYOWOMAN -> Uhyowoman
  *
  * 【今後の拡張】
  *  3人目以降を追加するときはここに値を増やし、CharacterRegistryに登録する。
  */
 public enum CharacterType {
-    REIMU_LIKE("reimu_like"),
-    MARISA_LIKE("marisa_like");
+    UHYOMAN("uhyoman"),
+    UHYOWOMAN("uhyowoman");
 
     private final String id;
 

@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * MarisaLikeCharacter：2人目のキャラ「火力集中型」のひな型。
+ * Uhyowoman：2人目のキャラ「火力集中型」のひな型。
  *
  * 【コンセプト】
  *  弾が真上に集中するパワー型。動きは遅めだが攻撃力が高い。
@@ -20,7 +20,7 @@ import java.util.Map;
  *  - ボム時に星形の高威力エフェクト
  *  - 動作アニメーション
  */
-public class MarisaLikeCharacter implements PlayerCharacter {
+public class Uhyowoman implements PlayerCharacter {
 
     private static final Map<Character, Color> PALETTE = PixelSprite.palette(
             'Y', new Color(255, 220, 90),     // 金髪
@@ -57,10 +57,10 @@ public class MarisaLikeCharacter implements PlayerCharacter {
     private final PixelSprite portraitSprite = new PixelSprite(PORTRAIT_PATTERN, PALETTE);
 
     @Override
-    public String getId() { return "marisa_like"; }
+    public String getId() { return "uhyowoman"; }
 
     @Override
-    public String getDisplayName() { return "Kurokumo (仮)"; }
+    public String getDisplayName() { return "Uhyowoman"; }
 
     @Override
     public String getProfile() {

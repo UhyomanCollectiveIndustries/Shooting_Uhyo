@@ -24,8 +24,8 @@ public final class CharacterRegistry {
     private static final List<PlayerCharacter> ALL = new ArrayList<>();
 
     static {
-        ALL.add(new ReimuLikeCharacter());
-        ALL.add(new MarisaLikeCharacter());
+        ALL.add(new Uhyoman());
+        ALL.add(new Uhyowoman());
         // TODO: 新キャラを追加するときはここに add する
     }
 

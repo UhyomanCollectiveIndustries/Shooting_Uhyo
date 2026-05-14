@@ -46,20 +46,16 @@ public class ScoreBonusManager {
         }
     }
 
-    /**
-     * 1UPを付与。Playerクラスに残機加算メソッドがまだ無いので、TODOで提示。
-     */
+    /** 1UPを付与。 */
     private void grantLife(Player player) {
-        // TODO: Player に addLife() を追加して呼び出す
-        // player.addLife(1);
+        player.addLife(1);
+        // TODO: 「Extend!」テキストの画面表示や効果音(SeKeys.EXTEND)を追加
     }
 
-    /**
-     * ボムを1つ付与。
-     */
+    /** ボムを1つ付与。 */
     private void grantBomb(Player player) {
-        // TODO: Player に addBomb() を追加して呼び出す
-        // player.addBomb(1);
+        player.addBomb(1);
+        // TODO: ボム獲得演出と効果音を追加
     }
 
     /** リセット(新規プレイ開始時に呼ぶ)。 */

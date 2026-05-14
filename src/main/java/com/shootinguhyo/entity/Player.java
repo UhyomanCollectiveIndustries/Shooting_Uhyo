@@ -201,6 +201,12 @@ public class Player extends Entity {
     public void addScore(long amount) { score += amount; }
     public void addGraze(int amount) { graze += amount; }
 
+    /** 残機を増やす(1UP用)。上限を設けておくと無限増加を防げる。 */
+    public void addLife(int amount) { lives = Math.min(9, lives + amount); }
+
+    /** ボム所持数を増やす(スコアボーナス用)。 */
+    public void addBomb(int amount) { bombs = Math.min(9, bombs + amount); }
+
     public int getLives() { return lives; }
     public int getBombs() { return bombs; }
     public int getPower() { return power; }

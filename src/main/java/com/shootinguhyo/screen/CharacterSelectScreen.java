@@ -1,9 +1,9 @@
 package com.shootinguhyo.screen;
 
 import com.shootinguhyo.InputHandler;
-import com.shootinguhyo.character.MarisaLikeCharacter;
 import com.shootinguhyo.character.PlayerCharacter;
-import com.shootinguhyo.character.ReimuLikeCharacter;
+import com.shootinguhyo.character.Uhyoman;
+import com.shootinguhyo.character.Uhyowoman;
 import com.shootinguhyo.config.GameConfig;
 
 import java.awt.Color;
@@ -30,8 +30,8 @@ public class CharacterSelectScreen implements Screen {
 
     // 選べるキャラ一覧。新キャラが増えたらここに追加。
     private final List<PlayerCharacter> characters = Arrays.asList(
-            new ReimuLikeCharacter(),
-            new MarisaLikeCharacter()
+            new Uhyoman(),
+            new Uhyowoman()
     );
 
     private int index = 0;

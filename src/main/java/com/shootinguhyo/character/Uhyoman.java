@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * ReimuLikeCharacter：1人目のキャラ「広範囲攻撃型」のひな型。
+ * Uhyoman：1人目のキャラ「広範囲攻撃型」のひな型。
  *
  * 【コンセプト】
  *  弾が広く扇状に広がるホーミング寄りキャラ。動きが少し速い。
@@ -20,7 +20,7 @@ import java.util.Map;
  *  - ボム時に「結界」を張る独自エフェクト
  *  - スプライトのアニメーション化(歩きモーション)
  */
-public class ReimuLikeCharacter implements PlayerCharacter {
+public class Uhyoman implements PlayerCharacter {
 
     // ドット絵パレット (現状は仮の配色)
     private static final Map<Character, Color> PALETTE = PixelSprite.palette(
@@ -58,10 +58,10 @@ public class ReimuLikeCharacter implements PlayerCharacter {
     private final PixelSprite portraitSprite = new PixelSprite(PORTRAIT_PATTERN, PALETTE);
 
     @Override
-    public String getId() { return "reimu_like"; }
+    public String getId() { return "uhyoman"; }
 
     @Override
-    public String getDisplayName() { return "Hakuyou (仮)"; }
+    public String getDisplayName() { return "Uhyoman"; }
 
     @Override
     public String getProfile() {
