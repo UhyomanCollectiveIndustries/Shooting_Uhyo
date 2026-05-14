@@ -408,9 +408,9 @@ public class GamePanel extends JPanel implements Runnable {
     private void createExplosion(int cx, int cy, int count, Color color) {
         for (int i = 0; i < count; i++) {
             Color c = new Color(
-                    Math.min(255, color.getRed() + rand.nextInt(60) - 30),
-                    Math.min(255, color.getGreen() + rand.nextInt(60) - 30),
-                    Math.min(255, color.getBlue() + rand.nextInt(60) - 30)
+                    Math.max(0, Math.min(255, color.getRed() + rand.nextInt(60) - 30)),
+                    Math.max(0, Math.min(255, color.getGreen() + rand.nextInt(60) - 30)),
+                    Math.max(0, Math.min(255, color.getBlue() + rand.nextInt(60) - 30))
             );
             particles.add(new Particle(cx, cy, c));
         }
