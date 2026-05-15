@@ -831,7 +831,7 @@ public class GamePanel extends JPanel implements Runnable {
         drawStars(g);
 
         // 左側：縦書きの和風タイトル
-        String[] vert = { "幻", "想", "う", "ひ", "ょ" };
+        String[] vert = { "U", "H", "Y", "O" };
         g.setFont(new Font("Serif", Font.BOLD, 38));
         int tx = 56;
         int ty = 70;
@@ -851,7 +851,7 @@ public class GamePanel extends JPanel implements Runnable {
         // 副題(横書き)
         g.setFont(new Font("Serif", Font.ITALIC, 14));
         g.setColor(new Color(230, 200, 220));
-        g.drawString("~ Shooting Uhyo ~", 30, ty + vert.length * 50 + 30);
+        g.drawString("~ 打倒ちくしょう ~", 30, ty + vert.length * 50 + 30);
 
         // 中央：キャラ立ち絵(デフォルトキャラ)
         PlayerCharacter portraitChar = CharacterRegistry.getDefault();
@@ -929,7 +929,7 @@ public class GamePanel extends JPanel implements Runnable {
                 new Color(120, 230, 120),  // EASY - 緑
                 new Color(120, 200, 255),  // NORMAL - 青
                 new Color(255, 150, 120),  // HARD - 橙
-                new Color(220, 120, 220)   // LUNATIC - 紫
+                new Color(220, 120, 220)   // LUNATIC - 紫 これいる？ｗ
         };
 
         int baseY = 110;
@@ -982,7 +982,7 @@ public class GamePanel extends JPanel implements Runnable {
         // 上部見出し
         g.setFont(new Font("SansSerif", Font.BOLD, 20));
         g.setColor(new Color(255, 230, 240));
-        String title = "プレイヤーを選択して下さい";
+        String title = "プレイヤーを選択してね";
         FontMetrics fm = g.getFontMetrics();
         g.drawString(title, (PANEL_WIDTH - fm.stringWidth(title)) / 2, 36);
         g.setColor(new Color(200, 80, 100));
@@ -1078,8 +1078,8 @@ public class GamePanel extends JPanel implements Runnable {
     /** キャラごとに紹介サブタイトル(2行)を返す。 */
     private String[] characterSubtitle(PlayerCharacter c) {
         return switch (c.getId()) {
-            case "uhyoman"   -> new String[]{"博麗神社の巫女さん", "(広範囲攻撃型)"};
-            case "uhyowoman" -> new String[]{"魔法の森の魔法使い", "(集中攻撃型)"};
+            case "uhyoman"   -> new String[]{"Uhyoの使い手", "(広範囲攻撃型)"};
+            case "uhyowoman" -> new String[]{"Uhyo過ぎる魔術師", "(集中攻撃型)"};
             default          -> new String[]{c.getDisplayName(), ""};
         };
     }
