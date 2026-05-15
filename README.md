@@ -50,6 +50,7 @@
 - Bossキャラクターのアニメーション(SpriteAnimation の活用)  
 - ステージ背景のパララックス強化(BackgroundLayer の複数レイヤー化)  
 - セーブ/ロード(GameOptions.save/load の実装)  
+- コンテニューができるようにする  
 
 ## 実装済みなもの  
 - 十字キー/WASDでの自機の移動  
