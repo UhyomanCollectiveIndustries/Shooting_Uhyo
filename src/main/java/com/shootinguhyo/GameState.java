@@ -14,6 +14,7 @@ package com.shootinguhyo;
  *
  * 【それぞれの意味】
  *  TITLE             : タイトル画面（Enter押下待ち）
+ *  MODE_SELECT       : 難易度(モード)選択画面
  *  CHARACTER_SELECT  : キャラクター選択画面
  *  OPTIONS           : オプション設定画面
  *  DIALOG            : ボス戦前後の会話シーン
@@ -28,6 +29,7 @@ package com.shootinguhyo;
  */
 public enum GameState {
     TITLE,
+    MODE_SELECT,
     CHARACTER_SELECT,
     OPTIONS,
     DIALOG,

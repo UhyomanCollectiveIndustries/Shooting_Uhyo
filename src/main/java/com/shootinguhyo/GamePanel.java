@@ -112,8 +112,23 @@ public class GamePanel extends JPanel implements Runnable {
     private Boss.Phase lastBossPhase = null;
 
     // メニュー位置
-    private final String[] titleMenu = { "NEW GAME", "OPTION", "QUIT" };
+    private final String[] titleMenu = {
+            "Start", "Extra Start", "Practice Start", "Replay",
+            "Score", "Music Room", "Option", "Quit"
+    };
     private int titleMenuIndex = 0;
+    /** 未実装メニューを押したときの一時告知タイマ(描画用)。 */
+    private int titleNoticeFrame = 0;
+    private String titleNoticeText = "";
+
+    // モード選択
+    private int modeSelectIndex = 1; // 初期はNormal
+    private static final String[] MODE_DESCRIPTIONS = {
+            "STGが苦手な方向けです  (全6面)",
+            "おおよそほとんどの人向けです  (全6面)",
+            "アーケードSTG並の難易度です  (全6面)",
+            "ちょっとおかしい人向け難易度です  (全6面)"
+    };
 
     private int charSelectIndex = 0;
 
@@ -210,6 +225,7 @@ public class GamePanel extends JPanel implements Runnable {
     private void update() {
         switch (gameState) {
             case TITLE -> updateTitle();
+            case MODE_SELECT -> updateModeSelect();
             case CHARACTER_SELECT -> updateCharacterSelect();
             case OPTIONS -> updateOptions();
             case DIALOG -> updateDialog();
@@ -229,6 +245,7 @@ public class GamePanel extends JPanel implements Runnable {
 
     private void updateTitle() {
         updateStars();
+        if (titleNoticeFrame > 0) titleNoticeFrame--;
 
         if (input.isJustPressed(KeyEvent.VK_UP) || input.isJustPressed(KeyEvent.VK_W)) {
             titleMenuIndex = (titleMenuIndex - 1 + titleMenu.length) % titleMenu.length;
@@ -239,18 +256,56 @@ public class GamePanel extends JPanel implements Runnable {
             audio.playSe(AudioManager.Se.MENU_MOVE);
         }
         if (input.isJustPressed(KeyEvent.VK_ENTER) || input.isJustPressed(KeyEvent.VK_Z)) {
-            audio.playSe(AudioManager.Se.MENU_SELECT);
             switch (titleMenuIndex) {
                 case 0 -> {
-                    charSelectIndex = 0;
-                    gameState = GameState.CHARACTER_SELECT;
+                    // Start: モード選択へ
+                    audio.playSe(AudioManager.Se.MENU_SELECT);
+                    modeSelectIndex = options.getDifficulty().ordinal();
+                    gameState = GameState.MODE_SELECT;
                 }
-                case 1 -> {
+                case 6 -> {
+                    // Option
+                    audio.playSe(AudioManager.Se.MENU_SELECT);
                     optionIndex = 0;
                     gameState = GameState.OPTIONS;
                 }
-                case 2 -> System.exit(0);
+                case 7 -> {
+                    audio.playSe(AudioManager.Se.MENU_SELECT);
+                    System.exit(0);
+                }
+                default -> {
+                    // 未実装メニュー
+                    audio.playSe(AudioManager.Se.MENU_MOVE);
+                    titleNoticeText = "「" + titleMenu[titleMenuIndex] + "」は未実装です";
+                    titleNoticeFrame = 120;
+                }
             }
+        }
+    }
+
+    // ===================== MODE_SELECT =====================
+
+    private void updateModeSelect() {
+        updateStars();
+        Difficulty[] modes = Difficulty.values();
+
+        if (input.isJustPressed(KeyEvent.VK_UP) || input.isJustPressed(KeyEvent.VK_W)) {
+            modeSelectIndex = (modeSelectIndex - 1 + modes.length) % modes.length;
+            audio.playSe(AudioManager.Se.MENU_MOVE);
+        }
+        if (input.isJustPressed(KeyEvent.VK_DOWN) || input.isJustPressed(KeyEvent.VK_S)) {
+            modeSelectIndex = (modeSelectIndex + 1) % modes.length;
+            audio.playSe(AudioManager.Se.MENU_MOVE);
+        }
+        if (input.isJustPressed(KeyEvent.VK_ENTER) || input.isJustPressed(KeyEvent.VK_Z)) {
+            audio.playSe(AudioManager.Se.MENU_SELECT);
+            options.setDifficulty(modes[modeSelectIndex]);
+            charSelectIndex = 0;
+            gameState = GameState.CHARACTER_SELECT;
+        }
+        if (input.isJustPressed(KeyEvent.VK_ESCAPE) || input.isJustPressed(KeyEvent.VK_X)) {
+            audio.playSe(AudioManager.Se.MENU_SELECT);
+            gameState = GameState.TITLE;
         }
     }
 
@@ -276,7 +331,7 @@ public class GamePanel extends JPanel implements Runnable {
         }
         if (input.isJustPressed(KeyEvent.VK_ESCAPE) || input.isJustPressed(KeyEvent.VK_X)) {
             audio.playSe(AudioManager.Se.MENU_SELECT);
-            gameState = GameState.TITLE;
+            gameState = GameState.MODE_SELECT;
         }
     }
 
@@ -746,6 +801,7 @@ public class GamePanel extends JPanel implements Runnable {
 
         switch (gameState) {
             case TITLE -> renderTitle(g);
+            case MODE_SELECT -> renderModeSelect(g);
             case CHARACTER_SELECT -> renderCharacterSelect(g);
             case OPTIONS -> renderOptions(g);
             case DIALOG -> { renderGame(g); if (dialogScene != null) dialogScene.draw(g, FIELD_WIDTH, FIELD_HEIGHT); }
@@ -760,118 +816,348 @@ public class GamePanel extends JPanel implements Runnable {
     }
 
     private void renderTitle(Graphics2D g) {
-        g.setColor(new Color(5, 0, 20));
+        // 背景
+        g.setColor(new Color(18, 4, 28));
         g.fillRect(0, 0, PANEL_WIDTH, PANEL_HEIGHT);
+        // 赤い放射状の柔らかい光(中央寄り)
+        java.awt.RadialGradientPaint rp = new java.awt.RadialGradientPaint(
+                PANEL_WIDTH / 2f, PANEL_HEIGHT / 2f + 40, 320f,
+                new float[]{0f, 1f},
+                new Color[]{new Color(120, 20, 40, 110), new Color(0, 0, 0, 0)});
+        java.awt.Paint oldPaint = g.getPaint();
+        g.setPaint(rp);
+        g.fillRect(0, 0, PANEL_WIDTH, PANEL_HEIGHT);
+        g.setPaint(oldPaint);
         drawStars(g);
 
-        g.setFont(new Font("SansSerif", Font.BOLD, 28));
-        g.setColor(new Color(255, 200, 255));
-        String title = "Shooting Uhyo";
-        FontMetrics fm = g.getFontMetrics();
-        g.drawString(title, (PANEL_WIDTH - fm.stringWidth(title)) / 2, 120);
+        // 左側：縦書きの和風タイトル
+        String[] vert = { "幻", "想", "う", "ひ", "ょ" };
+        g.setFont(new Font("Serif", Font.BOLD, 38));
+        int tx = 56;
+        int ty = 70;
+        // タイトル背景の縦帯
+        g.setColor(new Color(0, 0, 0, 140));
+        g.fillRect(tx - 14, ty - 36, 56, vert.length * 50 + 24);
+        g.setColor(new Color(200, 60, 80));
+        g.drawRect(tx - 14, ty - 36, 56, vert.length * 50 + 24);
+        for (int i = 0; i < vert.length; i++) {
+            // 影
+            g.setColor(new Color(60, 0, 0));
+            g.drawString(vert[i], tx + 2, ty + i * 50 + 2);
+            // 本体（赤系）
+            g.setColor(new Color(235, 90, 110));
+            g.drawString(vert[i], tx, ty + i * 50);
+        }
+        // 副題(横書き)
+        g.setFont(new Font("Serif", Font.ITALIC, 14));
+        g.setColor(new Color(230, 200, 220));
+        g.drawString("~ Shooting Uhyo ~", 30, ty + vert.length * 50 + 30);
 
-        // メニュー
+        // 中央：キャラ立ち絵(デフォルトキャラ)
+        PlayerCharacter portraitChar = CharacterRegistry.getDefault();
+        portraitChar.getPortraitSprite().draw(g, PANEL_WIDTH / 2.0 - 30, PANEL_HEIGHT / 2.0 + 10, 10);
+
+        // 右側：縦メニュー
         g.setFont(new Font("SansSerif", Font.BOLD, 18));
+        int mx = PANEL_WIDTH - 200;
+        int my = 90;
+        int spacing = 32;
         for (int i = 0; i < titleMenu.length; i++) {
             boolean selected = i == titleMenuIndex;
-            g.setColor(selected ? new Color(255, 240, 120) : new Color(180, 180, 220));
-            String label = (selected ? "> " : "  ") + titleMenu[i];
-            fm = g.getFontMetrics();
-            g.drawString(label, (PANEL_WIDTH - fm.stringWidth(label)) / 2, 220 + i * 36);
+            if (selected) {
+                // 選択中のハイライト帯
+                g.setColor(new Color(255, 220, 120, 80));
+                g.fillRect(mx - 12, my + i * spacing - 18, 180, 26);
+                g.setColor(new Color(255, 240, 120));
+                g.drawString("▶ " + titleMenu[i], mx, my + i * spacing);
+            } else {
+                g.setColor(new Color(200, 200, 230));
+                g.drawString("  " + titleMenu[i], mx, my + i * spacing);
+            }
         }
 
-        // 操作説明
-        g.setFont(new Font("Monospaced", Font.PLAIN, 11));
-        g.setColor(new Color(150, 150, 200));
-        String[] controls = {
-            "Up/Down: select   Enter/Z: confirm",
-            "Arrow/WASD: Move  Z: Shoot  X: Bomb",
-            "Shift: Focus  Esc: Pause"
-        };
-        int cy = 360;
-        for (String ctrl : controls) {
-            fm = g.getFontMetrics();
-            g.drawString(ctrl, (PANEL_WIDTH - fm.stringWidth(ctrl)) / 2, cy);
-            cy += 18;
+        // 未実装メニューを押したときの一時告知
+        if (titleNoticeFrame > 0) {
+            int alpha = Math.min(255, titleNoticeFrame * 4);
+            g.setFont(new Font("SansSerif", Font.BOLD, 14));
+            g.setColor(new Color(255, 220, 120, alpha));
+            FontMetrics fm = g.getFontMetrics();
+            int nx = (PANEL_WIDTH - fm.stringWidth(titleNoticeText)) / 2;
+            g.setColor(new Color(0, 0, 0, Math.min(180, alpha)));
+            g.fillRect(nx - 8, PANEL_HEIGHT - 78, fm.stringWidth(titleNoticeText) + 16, 24);
+            g.setColor(new Color(255, 220, 120, alpha));
+            g.drawString(titleNoticeText, nx, PANEL_HEIGHT - 60);
         }
+
+        // フッタ：著作権風
+        g.setFont(new Font("Serif", Font.PLAIN, 11));
+        g.setColor(new Color(180, 180, 200));
+        String copyright = "(C) 2026  Shooting Uhyo Project";
+        FontMetrics fm = g.getFontMetrics();
+        g.drawString(copyright, (PANEL_WIDTH - fm.stringWidth(copyright)) / 2, PANEL_HEIGHT - 18);
+    }
+
+    // ===================== MODE_SELECT RENDER =====================
+
+    private void renderModeSelect(Graphics2D g) {
+        g.setColor(new Color(15, 3, 24));
+        g.fillRect(0, 0, PANEL_WIDTH, PANEL_HEIGHT);
+        drawStars(g);
+        // 赤い放射ライト
+        java.awt.RadialGradientPaint rp = new java.awt.RadialGradientPaint(
+                PANEL_WIDTH / 2f, PANEL_HEIGHT / 2f, 280f,
+                new float[]{0f, 1f},
+                new Color[]{new Color(140, 30, 60, 120), new Color(0, 0, 0, 0)});
+        java.awt.Paint oldPaint = g.getPaint();
+        g.setPaint(rp);
+        g.fillRect(0, 0, PANEL_WIDTH, PANEL_HEIGHT);
+        g.setPaint(oldPaint);
+
+        // ヘッダ
+        g.setFont(new Font("SansSerif", Font.BOLD, 22));
+        g.setColor(new Color(255, 230, 240));
+        String header = "モードを選択してね";
+        FontMetrics fm = g.getFontMetrics();
+        g.drawString(header, (PANEL_WIDTH - fm.stringWidth(header)) / 2, 50);
+        // 下線
+        g.setColor(new Color(200, 80, 100));
+        g.drawLine(PANEL_WIDTH / 2 - 130, 60, PANEL_WIDTH / 2 + 130, 60);
+
+        Difficulty[] modes = Difficulty.values();
+        // 各モードの色合い
+        Color[] modeColors = {
+                new Color(120, 230, 120),  // EASY - 緑
+                new Color(120, 200, 255),  // NORMAL - 青
+                new Color(255, 150, 120),  // HARD - 橙
+                new Color(220, 120, 220)   // LUNATIC - 紫
+        };
+
+        int baseY = 110;
+        int rowH = 70;
+        for (int i = 0; i < modes.length; i++) {
+            boolean selected = (i == modeSelectIndex);
+            int y = baseY + i * rowH;
+
+            if (selected) {
+                // ハイライト枠
+                g.setColor(new Color(255, 230, 120, 60));
+                g.fillRect(120, y - 24, PANEL_WIDTH - 240, 60);
+                g.setColor(new Color(255, 230, 120));
+                g.drawRect(120, y - 24, PANEL_WIDTH - 240, 60);
+            }
+
+            // モード名
+            g.setFont(new Font("SansSerif", Font.BOLD, selected ? 26 : 22));
+            g.setColor(selected ? modeColors[i] : modeColors[i].darker());
+            g.drawString(modes[i].displayName, 150, y);
+
+            // 説明
+            g.setFont(new Font("SansSerif", Font.PLAIN, 12));
+            g.setColor(selected ? new Color(255, 255, 255) : new Color(160, 160, 180));
+            g.drawString(MODE_DESCRIPTIONS[i], 150, y + 22);
+        }
+
+        // フッタ操作説明
+        g.setFont(new Font("Monospaced", Font.PLAIN, 11));
+        g.setColor(new Color(150, 150, 180));
+        String hint = "Up/Down: 選択   Z/Enter: 決定   X/Esc: 戻る";
+        fm = g.getFontMetrics();
+        g.drawString(hint, (PANEL_WIDTH - fm.stringWidth(hint)) / 2, PANEL_HEIGHT - 18);
     }
 
     private void renderCharacterSelect(Graphics2D g) {
-        g.setColor(new Color(5, 0, 20));
+        g.setColor(new Color(12, 4, 22));
         g.fillRect(0, 0, PANEL_WIDTH, PANEL_HEIGHT);
         drawStars(g);
+        // 赤系の柔らかな放射
+        java.awt.RadialGradientPaint rp = new java.awt.RadialGradientPaint(
+                PANEL_WIDTH * 0.7f, PANEL_HEIGHT * 0.5f, 260f,
+                new float[]{0f, 1f},
+                new Color[]{new Color(150, 30, 60, 110), new Color(0, 0, 0, 0)});
+        java.awt.Paint oldPaint = g.getPaint();
+        g.setPaint(rp);
+        g.fillRect(0, 0, PANEL_WIDTH, PANEL_HEIGHT);
+        g.setPaint(oldPaint);
 
-        g.setFont(new Font("SansSerif", Font.BOLD, 22));
-        g.setColor(new Color(255, 220, 255));
-        String title = "Select Character";
+        // 上部見出し
+        g.setFont(new Font("SansSerif", Font.BOLD, 20));
+        g.setColor(new Color(255, 230, 240));
+        String title = "プレイヤーを選択して下さい";
         FontMetrics fm = g.getFontMetrics();
-        g.drawString(title, (PANEL_WIDTH - fm.stringWidth(title)) / 2, 50);
+        g.drawString(title, (PANEL_WIDTH - fm.stringWidth(title)) / 2, 36);
+        g.setColor(new Color(200, 80, 100));
+        g.drawLine(PANEL_WIDTH / 2 - 150, 46, PANEL_WIDTH / 2 + 150, 46);
 
         List<PlayerCharacter> chars = CharacterRegistry.all();
         PlayerCharacter cur = chars.get(charSelectIndex);
 
-        // 立ち絵(4倍)
-        cur.getPortraitSprite().draw(g, PANEL_WIDTH / 2.0, PANEL_HEIGHT / 2.0 - 20, 4);
-
-        // 名前
-        g.setFont(new Font("SansSerif", Font.BOLD, 18));
-        g.setColor(Color.WHITE);
-        fm = g.getFontMetrics();
-        g.drawString(cur.getDisplayName(),
-                (PANEL_WIDTH - fm.stringWidth(cur.getDisplayName())) / 2, PANEL_HEIGHT - 130);
-
-        // プロフィール
-        g.setFont(new Font("SansSerif", Font.PLAIN, 13));
-        g.setColor(new Color(200, 200, 220));
-        int yLine = PANEL_HEIGHT - 105;
-        for (String line : cur.getProfile().split("\n")) {
-            fm = g.getFontMetrics();
-            g.drawString(line, (PANEL_WIDTH - fm.stringWidth(line)) / 2, yLine);
-            yLine += 18;
-        }
-
-        // 左右の矢印プロンプト
-        g.setFont(new Font("SansSerif", Font.BOLD, 24));
-        g.setColor(new Color(255, 240, 120));
-        g.drawString("<", 60, PANEL_HEIGHT / 2);
-        g.drawString(">", PANEL_WIDTH - 76, PANEL_HEIGHT / 2);
-
-        g.setFont(new Font("Monospaced", Font.PLAIN, 10));
-        g.setColor(new Color(120, 120, 160));
-        String hint = "Left/Right: select   Z: confirm   X: back";
-        fm = g.getFontMetrics();
-        g.drawString(hint, (PANEL_WIDTH - fm.stringWidth(hint)) / 2, PANEL_HEIGHT - 20);
-    }
-
-    private void renderOptions(Graphics2D g) {
-        g.setColor(new Color(5, 0, 20));
-        g.fillRect(0, 0, PANEL_WIDTH, PANEL_HEIGHT);
-        drawStars(g);
-
+        // 左側：現在選択中モード(難易度)
+        int leftX = 30;
+        int modeY = 110;
+        Color modeColor = switch (options.getDifficulty()) {
+            case EASY    -> new Color(120, 230, 120);
+            case NORMAL  -> new Color(120, 200, 255);
+            case HARD    -> new Color(255, 150, 120);
+            case LUNATIC -> new Color(220, 120, 220);
+        };
         g.setFont(new Font("SansSerif", Font.BOLD, 22));
-        g.setColor(new Color(255, 220, 255));
-        String title = "Option";
-        FontMetrics fm = g.getFontMetrics();
-        g.drawString(title, (PANEL_WIDTH - fm.stringWidth(title)) / 2, 60);
+        g.setColor(modeColor);
+        g.drawString(options.getDifficulty().displayName, leftX, modeY);
+        g.setFont(new Font("SansSerif", Font.PLAIN, 11));
+        g.setColor(new Color(200, 200, 220));
+        g.drawString(MODE_DESCRIPTIONS[options.getDifficulty().ordinal()], leftX, modeY + 18);
 
-        g.setFont(new Font("Monospaced", Font.PLAIN, 14));
-        int startY = 130;
-        for (int i = 0; i < OPTION_LABELS.length; i++) {
-            boolean selected = i == optionIndex;
-            g.setColor(selected ? new Color(255, 240, 120) : new Color(180, 180, 220));
-            String label = (selected ? "> " : "  ") + OPTION_LABELS[i];
-            g.drawString(label, 140, startY + i * 32);
-            String value = currentOptionValueText(i);
-            if (value != null) {
-                g.drawString(value, 320, startY + i * 32);
+        // 中央：立ち絵を大きく
+        cur.getPortraitSprite().draw(g, PANEL_WIDTH / 2.0 - 20, PANEL_HEIGHT / 2.0 - 30, 8);
+
+        // 右側：名前・プロフィール・ステータス
+        int rightX = PANEL_WIDTH - 230;
+        int infoY = 130;
+
+        // 紹介ラベル(キャラ別)
+        g.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        g.setColor(new Color(255, 230, 120));
+        String[] subTitles = characterSubtitle(cur);
+        g.drawString(subTitles[0], rightX, infoY);
+        g.drawString(subTitles[1], rightX, infoY + 16);
+
+        // キャラ名
+        g.setFont(new Font("Serif", Font.BOLD, 26));
+        g.setColor(new Color(255, 80, 100));
+        g.drawString(cur.getDisplayName(), rightX, infoY + 50);
+        g.setColor(new Color(255, 80, 100));
+        g.drawLine(rightX, infoY + 56, rightX + 180, infoY + 56);
+
+        // ステータス(星表記)
+        int[] stats = characterStars(cur);  // [移動速度, 攻撃範囲, 攻撃力]
+        String[] statLabels = {"移動速度", "攻撃範囲", "攻撃力"};
+        g.setFont(new Font("SansSerif", Font.PLAIN, 13));
+        for (int i = 0; i < statLabels.length; i++) {
+            int sy = infoY + 80 + i * 22;
+            g.setColor(new Color(220, 220, 240));
+            g.drawString(statLabels[i], rightX, sy);
+            // 星を描画(★が満、☆が未)
+            int starsBase = rightX + 80;
+            for (int s = 0; s < 5; s++) {
+                if (s < stats[i]) {
+                    g.setColor(new Color(255, 220, 100));
+                    g.drawString("★", starsBase + s * 14, sy);
+                } else {
+                    g.setColor(new Color(80, 80, 110));
+                    g.drawString("☆", starsBase + s * 14, sy);
+                }
             }
         }
 
-        g.setFont(new Font("Monospaced", Font.PLAIN, 10));
-        g.setColor(new Color(120, 120, 160));
-        String hint = "Up/Down: move   Left/Right: change   X: back";
+        // プロフィール
+        g.setFont(new Font("SansSerif", Font.PLAIN, 11));
+        g.setColor(new Color(180, 180, 210));
+        int profY = infoY + 170;
+        for (String line : cur.getProfile().split("\n")) {
+            g.drawString(line, rightX, profY);
+            profY += 14;
+        }
+
+        // 左右選択用の矢印 (キャラが2人以上のとき)
+        if (chars.size() > 1) {
+            int blink = (int) (Math.sin(System.currentTimeMillis() / 200.0) * 60 + 195);
+            g.setFont(new Font("SansSerif", Font.BOLD, 28));
+            g.setColor(new Color(255, 220, 120, Math.max(80, Math.min(255, blink))));
+            g.drawString("◀", PANEL_WIDTH / 2 - 130, PANEL_HEIGHT / 2 + 10);
+            g.drawString("▶", PANEL_WIDTH / 2 + 110, PANEL_HEIGHT / 2 + 10);
+        }
+
+        // フッタ操作説明
+        g.setFont(new Font("Monospaced", Font.PLAIN, 11));
+        g.setColor(new Color(150, 150, 180));
+        String hint = "←→: 選択   Z/Enter: 決定   X/Esc: 戻る";
         fm = g.getFontMetrics();
-        g.drawString(hint, (PANEL_WIDTH - fm.stringWidth(hint)) / 2, PANEL_HEIGHT - 20);
+        g.drawString(hint, (PANEL_WIDTH - fm.stringWidth(hint)) / 2, PANEL_HEIGHT - 18);
+    }
+
+    /** キャラごとに紹介サブタイトル(2行)を返す。 */
+    private String[] characterSubtitle(PlayerCharacter c) {
+        return switch (c.getId()) {
+            case "uhyoman"   -> new String[]{"博麗神社の巫女さん", "(広範囲攻撃型)"};
+            case "uhyowoman" -> new String[]{"魔法の森の魔法使い", "(集中攻撃型)"};
+            default          -> new String[]{c.getDisplayName(), ""};
+        };
+    }
+
+    /** キャラごとのスター値 [移動速度, 攻撃範囲, 攻撃力] を返す(1〜5)。 */
+    private int[] characterStars(PlayerCharacter c) {
+        // 移動速度はgetNormalSpeedから簡易換算(4.0〜6.0想定)
+        int speed = (int) Math.max(1, Math.min(5, Math.round(c.getNormalSpeed() - 1.0)));
+        return switch (c.getId()) {
+            case "uhyoman"   -> new int[]{speed, 4, 3};
+            case "uhyowoman" -> new int[]{Math.max(1, speed - 1), 2, 5};
+            default          -> new int[]{speed, 3, 3};
+        };
+    }
+
+    private void renderOptions(Graphics2D g) {
+        g.setColor(new Color(15, 4, 26));
+        g.fillRect(0, 0, PANEL_WIDTH, PANEL_HEIGHT);
+        drawStars(g);
+        // 中央の柔らかいライト
+        java.awt.RadialGradientPaint rp = new java.awt.RadialGradientPaint(
+                PANEL_WIDTH / 2f, PANEL_HEIGHT / 2f, 300f,
+                new float[]{0f, 1f},
+                new Color[]{new Color(140, 30, 60, 100), new Color(0, 0, 0, 0)});
+        java.awt.Paint oldPaint = g.getPaint();
+        g.setPaint(rp);
+        g.fillRect(0, 0, PANEL_WIDTH, PANEL_HEIGHT);
+        g.setPaint(oldPaint);
+
+        // ヘッダ
+        g.setFont(new Font("SansSerif", Font.BOLD, 24));
+        g.setColor(new Color(255, 230, 240));
+        String title = "Option";
+        FontMetrics fm = g.getFontMetrics();
+        g.drawString(title, (PANEL_WIDTH - fm.stringWidth(title)) / 2, 50);
+        g.setColor(new Color(200, 80, 100));
+        g.drawLine(PANEL_WIDTH / 2 - 90, 60, PANEL_WIDTH / 2 + 90, 60);
+
+        // パネル枠(中央)
+        int panelX = 90;
+        int panelY = 90;
+        int panelW = PANEL_WIDTH - 180;
+        int panelH = PANEL_HEIGHT - 150;
+        g.setColor(new Color(0, 0, 0, 140));
+        g.fillRect(panelX, panelY, panelW, panelH);
+        g.setColor(new Color(140, 80, 120));
+        g.drawRect(panelX, panelY, panelW, panelH);
+
+        // 項目
+        int startY = panelY + 40;
+        int rowH = 36;
+        for (int i = 0; i < OPTION_LABELS.length; i++) {
+            boolean selected = i == optionIndex;
+            int y = startY + i * rowH;
+            if (selected) {
+                g.setColor(new Color(255, 220, 120, 60));
+                g.fillRect(panelX + 16, y - 20, panelW - 32, 28);
+            }
+            g.setFont(new Font("SansSerif", Font.BOLD, 16));
+            g.setColor(selected ? new Color(255, 240, 120) : new Color(200, 200, 230));
+            g.drawString((selected ? "▶ " : "  ") + OPTION_LABELS[i], panelX + 28, y);
+
+            String value = currentOptionValueText(i);
+            if (value != null) {
+                g.setFont(new Font("Monospaced", Font.BOLD, 15));
+                g.setColor(selected ? new Color(255, 255, 200) : new Color(170, 170, 210));
+                // 右寄せ
+                int vw = g.getFontMetrics().stringWidth(value);
+                g.drawString(value, panelX + panelW - vw - 28, y);
+            }
+        }
+
+        // フッタ操作説明
+        g.setFont(new Font("Monospaced", Font.PLAIN, 11));
+        g.setColor(new Color(150, 150, 180));
+        String hint = "↑↓: 項目移動   ←→: 値変更   Z/Enter: 決定   X/Esc: 戻る";
+        fm = g.getFontMetrics();
+        g.drawString(hint, (PANEL_WIDTH - fm.stringWidth(hint)) / 2, PANEL_HEIGHT - 18);
     }
 
     private String currentOptionValueText(int i) {

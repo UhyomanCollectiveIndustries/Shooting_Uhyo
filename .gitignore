@@ -41,3 +41,4 @@ Thumbs.db
 # Logs
 *.log
 Reference_material/*
+.claude/settings.local.json
