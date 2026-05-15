@@ -32,4 +32,13 @@ public enum Difficulty {
         this.bulletDensityMul = bulletDensityMul;
         this.enemyHpMul = enemyHpMul;
     }
+
+    /**
+     * 現在の難易度。EnemyBullet/Enemy/Boss等が参照して挙動を調整する。
+     * GameConfig.setDifficulty() から同期される。
+     */
+    private static Difficulty current = NORMAL;
+
+    public static Difficulty current() { return current; }
+    public static void setCurrent(Difficulty d) { current = (d == null ? NORMAL : d); }
 }

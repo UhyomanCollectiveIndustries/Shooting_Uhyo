@@ -1,5 +1,7 @@
 package com.shootinguhyo.entity.bullet;
 
+import com.shootinguhyo.config.Difficulty;
+
 import java.awt.*;
 import java.awt.geom.Ellipse2D;
 
@@ -22,7 +24,9 @@ public class EnemyBullet extends Bullet {
     private Color color;
 
     public EnemyBullet(double x, double y, double vx, double vy, BulletSize size, Color color) {
-        super(x, y, vx, vy, getRadiusForSize(size));
+        super(x, y, vx * Difficulty.current().bulletSpeedMul,
+                    vy * Difficulty.current().bulletSpeedMul,
+                    getRadiusForSize(size));
         this.size = size;
         this.color = color;
     }

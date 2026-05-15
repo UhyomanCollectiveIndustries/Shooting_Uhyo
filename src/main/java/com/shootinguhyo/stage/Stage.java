@@ -28,4 +28,13 @@ public interface Stage {
 
     /** ステージが完全に終わった(クリア後の余韻フレーム含む)か判定する。 */
     boolean isComplete(int frame);
+
+    /**
+     * このステージの背景に乗せるオーバーレイ色(透明度込み)。
+     * GamePanelが星空の上に重ねて雰囲気を変える用途。
+     * デフォルトは「無色透明」=何も乗せない。
+     */
+    default java.awt.Color backgroundTint() {
+        return new java.awt.Color(0, 0, 0, 0);
+    }
 }

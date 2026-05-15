@@ -54,6 +54,12 @@ public class Boss extends Entity {
 
     public Boss(double x, double y) {
         super(x, y);
+        // 難易度に応じて各フェーズのHPをスケール
+        double hpMul = com.shootinguhyo.config.Difficulty.current().enemyHpMul;
+        phase1Hp = (int)(phase1Hp * hpMul);
+        spell1Hp = (int)(spell1Hp * hpMul);
+        spell2Hp = (int)(spell2Hp * hpMul);
+        spell3Hp = (int)(spell3Hp * hpMul);
         currentHp = phase1Hp;
         maxHp = phase1Hp;
     }

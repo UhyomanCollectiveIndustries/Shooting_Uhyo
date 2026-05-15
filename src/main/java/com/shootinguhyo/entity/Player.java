@@ -1,6 +1,7 @@
 package com.shootinguhyo.entity;
 
 import com.shootinguhyo.InputHandler;
+import com.shootinguhyo.character.PlayerCharacter;
 import com.shootinguhyo.entity.bullet.PlayerBullet;
 import com.shootinguhyo.util.MathUtil;
 
@@ -28,9 +29,12 @@ import java.util.List;
 public class Player extends Entity {
     public static final int FIELD_WIDTH = 384;
     public static final int FIELD_HEIGHT = 448;
-    private static final double NORMAL_SPEED = 5.0; // 通常移動速度
-    private static final double FOCUS_SPEED = 2.5;  // Shift押下中(低速)の速度
-    private static final double HITBOX_RADIUS = 4.0; // 当たり判定の半径(小さく設計)
+    private static final double DEFAULT_NORMAL_SPEED = 5.0; // 通常移動速度のデフォルト
+    private static final double DEFAULT_FOCUS_SPEED = 2.5;  // Shift押下中の速度のデフォルト
+    private static final double DEFAULT_HITBOX_RADIUS = 4.0; // 当たり判定の半径のデフォルト
+
+    // 選択されたキャラ。未設定なら従来のデフォルト挙動を使う。
+    private PlayerCharacter character;
 
     private int lives = 3;   // 残機
     private int bombs = 3;   // ボム所持数
@@ -51,6 +55,24 @@ public class Player extends Entity {
         super(x, y);
     }
 
+    public Player(double x, double y, PlayerCharacter character) {
+        super(x, y);
+        this.character = character;
+    }
+
+    public void setCharacter(PlayerCharacter character) { this.character = character; }
+    public PlayerCharacter getCharacter() { return character; }
+
+    private double normalSpeed() {
+        return character != null ? character.getNormalSpeed() : DEFAULT_NORMAL_SPEED;
+    }
+    private double focusSpeed() {
+        return character != null ? character.getFocusSpeed() : DEFAULT_FOCUS_SPEED;
+    }
+    private double hitboxRadius() {
+        return character != null ? character.getHitboxRadius() : DEFAULT_HITBOX_RADIUS;
+    }
+
     /**
      * プレイヤーの1フレーム更新。
      * 入力に応じて移動・射撃・ボムを処理する。
@@ -58,7 +80,7 @@ public class Player extends Entity {
     public void update(InputHandler input) {
         // Shiftで低速モードへ
         boolean focus = input.isDown(KeyEvent.VK_SHIFT);
-        double speed = focus ? FOCUS_SPEED : NORMAL_SPEED;
+        double speed = focus ? focusSpeed() : normalSpeed();
 
         // 移動量を計算。矢印キーとWASDの両方に対応(操作性向上のため)
         double dx = 0, dy = 0;
@@ -75,8 +97,9 @@ public class Player extends Entity {
         }
 
         // 移動結果が画面外に出ないようclampでフィールド内に制限
-        x = MathUtil.clamp(x + dx, HITBOX_RADIUS, FIELD_WIDTH - HITBOX_RADIUS);
-        y = MathUtil.clamp(y + dy, HITBOX_RADIUS, FIELD_HEIGHT - HITBOX_RADIUS);
+        double hr = hitboxRadius();
+        x = MathUtil.clamp(x + dx, hr, FIELD_WIDTH - hr);
+        y = MathUtil.clamp(y + dy, hr, FIELD_HEIGHT - hr);
 
         // Zキー押しっぱなしで連射。クールダウン管理で連射速度を一定に
         if (input.isDown(KeyEvent.VK_Z) && shootCooldown <= 0) {
@@ -102,8 +125,13 @@ public class Player extends Entity {
     /**
      * 弾を発射する。
      * フォーカス(低速)時とノーマル時で弾の出方が違うのが弾幕シューティングの定番。
+     * キャラが設定されていれば、そのキャラ固有のショットを使う。
      */
     private void shoot(boolean focus) {
+        if (character != null) {
+            newBullets.addAll(character.createShot(x, y, power, focus));
+            return;
+        }
         int dmg = 10;
         if (focus) {
             // フォーカス時：弾を集中させて当てやすくする(横並び5発)
@@ -212,7 +240,7 @@ public class Player extends Entity {
     public int getPower() { return power; }
     public long getScore() { return score; }
     public int getGraze() { return graze; }
-    public double getHitboxRadius() { return HITBOX_RADIUS; }
+    public double getHitboxRadius() { return hitboxRadius(); }
     public boolean isAlive() { return lives > 0; }
 
     /** Entity要件のupdate()。プレイヤーはInputHandlerが必要なので別バージョンを使う。 */
@@ -233,6 +261,12 @@ public class Player extends Entity {
     @Override
     public void draw(Graphics2D g) {
         if (invincibleFrames > 0 && (invincibleFrames / 5) % 2 == 0 && !bombing) return;
+
+        // キャラが設定されていればドット絵を描画、なければ従来の三角形
+        if (character != null) {
+            character.getInGameSprite().draw(g, x, y, 2);
+            return;
+        }
 
         Path2D triangle = new Path2D.Double();
         triangle.moveTo(x, y - 14);           // 上頂点
@@ -260,12 +294,11 @@ public class Player extends Entity {
      * これがあるおかげで「自分のどこに当たるか」が見えて避けやすくなる。
      */
     public void drawHitbox(Graphics2D g) {
+        double hr = hitboxRadius();
         g.setColor(new Color(255, 0, 0, 180));
-        g.fill(new Ellipse2D.Double(x - HITBOX_RADIUS, y - HITBOX_RADIUS,
-                HITBOX_RADIUS * 2, HITBOX_RADIUS * 2));
+        g.fill(new Ellipse2D.Double(x - hr, y - hr, hr * 2, hr * 2));
         g.setColor(Color.RED);
-        g.draw(new Ellipse2D.Double(x - HITBOX_RADIUS, y - HITBOX_RADIUS,
-                HITBOX_RADIUS * 2, HITBOX_RADIUS * 2));
+        g.draw(new Ellipse2D.Double(x - hr, y - hr, hr * 2, hr * 2));
     }
 
     /**

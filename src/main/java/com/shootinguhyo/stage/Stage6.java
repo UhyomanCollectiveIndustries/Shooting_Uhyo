@@ -33,4 +33,8 @@ public class Stage6 implements Stage {
 
     @Override
     public boolean isComplete(int frame) { return frame > BOSS_FRAME + 600; }
+
+    /** 宇宙風の濃紫色(ラスボス感)。 */
+    @Override
+    public java.awt.Color backgroundTint() { return new java.awt.Color(30, 0, 60, 100); }
 }

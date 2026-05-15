@@ -34,8 +34,10 @@ public class Enemy extends Entity {
 
     public Enemy(double x, double y, int hp, int score) {
         super(x, y);
-        this.hp = hp;
-        this.maxHp = hp;
+        // 難易度に応じてHPをスケール
+        int scaledHp = Math.max(1, (int)(hp * com.shootinguhyo.config.Difficulty.current().enemyHpMul));
+        this.hp = scaledHp;
+        this.maxHp = scaledHp;
         this.score = score;
         this.startX = x;
     }

@@ -39,4 +39,8 @@ public class Stage5 implements Stage {
 
     @Override
     public boolean isComplete(int frame) { return frame > BOSS_FRAME + 300; }
+
+    /** 雷雨風の青寄り暗色。 */
+    @Override
+    public java.awt.Color backgroundTint() { return new java.awt.Color(10, 10, 50, 90); }
 }

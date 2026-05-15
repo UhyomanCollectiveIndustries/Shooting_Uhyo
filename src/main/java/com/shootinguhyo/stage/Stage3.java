@@ -38,4 +38,8 @@ public class Stage3 implements Stage {
 
     @Override
     public boolean isComplete(int frame) { return frame > BOSS_FRAME + 300; }
+
+    /** 夕暮れ風の赤紫色。 */
+    @Override
+    public java.awt.Color backgroundTint() { return new java.awt.Color(60, 20, 40, 70); }
 }

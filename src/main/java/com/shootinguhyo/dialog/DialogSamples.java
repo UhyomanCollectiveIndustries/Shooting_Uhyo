@@ -66,4 +66,73 @@ public final class DialogSamples {
                         playerPortrait, DialogLine.Side.LEFT)
         );
     }
+
+    /**
+     * ステージ番号からプリボス会話を返す汎用関数。
+     * ステージごとの個別シナリオは今後この中で分岐させる(現状は仮テキスト)。
+     */
+    public static List<DialogLine> preBoss(int stageNo, PlayerCharacter playerChar) {
+        if (stageNo == 1) return preBossStage1(playerChar);
+
+        PixelSprite playerPortrait = playerChar.getPortraitSprite();
+        PixelSprite bossPortrait = playerPortrait;
+        String bossName = bossNameFor(stageNo);
+
+        return Arrays.asList(
+                new DialogLine(playerChar.getDisplayName(),
+                        "ここがステージ" + stageNo + "か…！",
+                        playerPortrait, DialogLine.Side.LEFT),
+                new DialogLine(bossName,
+                        "よくぞここまで来た。\nしかしここは通さん。",
+                        bossPortrait, DialogLine.Side.RIGHT),
+                new DialogLine(playerChar.getDisplayName(),
+                        "悪いけど、押し通らせてもらう！",
+                        playerPortrait, DialogLine.Side.LEFT)
+        );
+    }
+
+    /**
+     * ステージ番号からポストボス会話を返す汎用関数。
+     * 最終ステージ(6)は次のエンディングに繋がる流れに。
+     */
+    public static List<DialogLine> postBoss(int stageNo, PlayerCharacter playerChar) {
+        if (stageNo == 1) return postBossStage1(playerChar);
+
+        PixelSprite playerPortrait = playerChar.getPortraitSprite();
+        PixelSprite bossPortrait = playerPortrait;
+        String bossName = bossNameFor(stageNo);
+
+        if (stageNo >= 6) {
+            return Arrays.asList(
+                    new DialogLine(bossName,
+                            "ここまでとは…\nこの宇宙の運命、預けたぞ…",
+                            bossPortrait, DialogLine.Side.RIGHT),
+                    new DialogLine(playerChar.getDisplayName(),
+                            "ようやく終わった…\n平和が戻ったのね。",
+                            playerPortrait, DialogLine.Side.LEFT)
+            );
+        }
+
+        return Arrays.asList(
+                new DialogLine(bossName,
+                        "見事…通るがいい。",
+                        bossPortrait, DialogLine.Side.RIGHT),
+                new DialogLine(playerChar.getDisplayName(),
+                        "ありがと、先を急ぐわ。",
+                        playerPortrait, DialogLine.Side.LEFT)
+        );
+    }
+
+    /** 仮のボス名(差し替え予定)。 */
+    private static String bossNameFor(int stageNo) {
+        return switch (stageNo) {
+            case 1 -> "ステージ1ボス";
+            case 2 -> "ステージ2ボス";
+            case 3 -> "ステージ3ボス";
+            case 4 -> "ステージ4ボス";
+            case 5 -> "ステージ5ボス";
+            case 6 -> "ラスボス『ちくしょー』";
+            default -> "???";
+        };
+    }
 }

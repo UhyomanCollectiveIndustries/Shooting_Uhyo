@@ -23,7 +23,11 @@ public class GameConfig {
     public void setCharacter(PlayerCharacter character) { this.character = character; }
 
     public Difficulty getDifficulty() { return difficulty; }
-    public void setDifficulty(Difficulty difficulty) { this.difficulty = difficulty; }
+    public void setDifficulty(Difficulty difficulty) {
+        this.difficulty = difficulty;
+        // ゲーム本体(Enemy/EnemyBullet/Boss)から参照される静的な現在値も同期する
+        Difficulty.setCurrent(difficulty);
+    }
 
     public int getStartingLives() { return startingLives; }
     public void setStartingLives(int startingLives) { this.startingLives = startingLives; }

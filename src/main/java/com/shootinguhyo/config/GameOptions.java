@@ -24,7 +24,11 @@ public class GameOptions {
     private boolean showHitbox = false; // 常時ヒットボックス表示
 
     public Difficulty getDifficulty() { return difficulty; }
-    public void setDifficulty(Difficulty difficulty) { this.difficulty = difficulty; }
+    public void setDifficulty(Difficulty difficulty) {
+        this.difficulty = difficulty;
+        // 静的な現在値も同期(オプション画面から変更されたとき用)
+        Difficulty.setCurrent(difficulty);
+    }
 
     public int getBgmVolume() { return bgmVolume; }
     public void setBgmVolume(int bgmVolume) {
