@@ -42,4 +42,8 @@ Thumbs.db
 *.log
 Reference_material/*
 .claude/settings.local.json
-src/main/java/com/shootinguhyo/pictures/*
+
+src/main/java/com/shootinguhyo/pictures/IMG_4416.jpg
+src/main/java/com/shootinguhyo/pictures/IMG_4417.jpg
+src/main/java/com/shootinguhyo/pictures/IMG_4475.jpg
+src/main/java/com/shootinguhyo/pictures/IMG_4741.jpg

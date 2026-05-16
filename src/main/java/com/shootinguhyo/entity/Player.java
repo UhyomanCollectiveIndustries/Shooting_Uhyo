@@ -2,6 +2,7 @@ package com.shootinguhyo.entity;
 
 import com.shootinguhyo.InputHandler;
 import com.shootinguhyo.character.PlayerCharacter;
+import com.shootinguhyo.effect.BombImageRegistry;
 import com.shootinguhyo.entity.bullet.PlayerBullet;
 import com.shootinguhyo.util.MathUtil;
 
@@ -9,6 +10,7 @@ import java.awt.*;
 import java.awt.event.KeyEvent;
 import java.awt.geom.Ellipse2D;
 import java.awt.geom.Path2D;
+import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -301,14 +303,186 @@ public class Player extends Entity {
         g.draw(new Ellipse2D.Double(x - hr, y - hr, hr * 2, hr * 2));
     }
 
+    /** ボム持続フレーム数(発動時にセットされる値)。 */
+    private static final int BOMB_TOTAL_FRAMES = 180;
+
     /**
-     * ボム発動中の白いフラッシュ演出。
-     * ボム残り時間に応じてアルファ(透明度)を変えてフェードアウトさせる。
+     * ボム発動中の演出(東方風スペルカード)。
+     * 構成:
+     *  1) 強い白フラッシュ(発動直後)
+     *  2) 縦方向の光線(BEAM) — 中央から外へ展開
+     *  3) キャラ画像 — 中央に大きく(リムグロー付き)
+     *  4) 周囲のスパーク粒子
+     *  5) 終了時のフェードアウト
+     * 敵・弾が見えるよう、中盤以降はキャラ画像のアルファを下げる。
      */
     public void drawBomb(Graphics2D g, int fieldWidth, int fieldHeight) {
         if (!bombing) return;
-        float alpha = Math.min(1.0f, bombFrames / 30.0f);
-        g.setColor(new Color(1.0f, 1.0f, 1.0f, alpha * 0.5f));
-        g.fillRect(0, 0, fieldWidth, fieldHeight);
+
+        int elapsed = BOMB_TOTAL_FRAMES - bombFrames;
+        int remaining = bombFrames;
+        // 終了時フェード係数(残り30フレームから線形に0へ)
+        float endFade = remaining < 30 ? remaining / 30f : 1f;
+
+        // ===== 1) 白フラッシュ =====
+        float flashAlpha = Math.max(0f, 1f - elapsed / 14f);
+        if (flashAlpha > 0f) {
+            g.setColor(new Color(1f, 1f, 1f, flashAlpha * 0.85f));
+            g.fillRect(0, 0, fieldWidth, fieldHeight);
+        }
+
+        // ===== 2) 縦方向の光線 =====
+        drawBombBeams(g, fieldWidth, fieldHeight, elapsed, endFade);
+
+        // ===== 3) キャラ画像 =====
+        BufferedImage img = BombImageRegistry.imageFor(character);
+        if (img != null) {
+            drawBombCharacterImage(g, fieldWidth, fieldHeight, img, elapsed, remaining, endFade);
+        } else {
+            // 画像なし時は中央に光球フォールバック
+            float a = Math.min(1.0f, remaining / 30.0f);
+            g.setColor(new Color(1.0f, 1.0f, 1.0f, a * 0.4f));
+            g.fillRect(0, 0, fieldWidth, fieldHeight);
+        }
+
+        // ===== 4) スパーク粒子 =====
+        drawBombSparkles(g, fieldWidth, fieldHeight, elapsed, endFade);
+
+        // ===== 5) 「SPELL CARD」風のテキスト(発動直後だけ) =====
+        if (elapsed < 60) {
+            float textAlpha = elapsed < 30 ? elapsed / 30f : Math.max(0f, 1f - (elapsed - 30) / 30f);
+            g.setFont(new Font("Serif", Font.BOLD | Font.ITALIC, 28));
+            String label = "～ BOMB! ～";
+            FontMetrics fm = g.getFontMetrics();
+            int tx = (fieldWidth - fm.stringWidth(label)) / 2;
+            int ty = 60;
+            g.setColor(new Color(0f, 0f, 0f, textAlpha * 0.7f));
+            g.drawString(label, tx + 2, ty + 2);
+            g.setColor(new Color(1f, 0.95f, 0.5f, textAlpha));
+            g.drawString(label, tx, ty);
+        }
+    }
+
+    /** 縦方向のスペルライン(複数本)。中央から外へ展開し、時間で薄くなる。 */
+    private void drawBombBeams(Graphics2D g, int fieldWidth, int fieldHeight, int elapsed, float endFade) {
+        Composite oldComp = g.getComposite();
+        // 中央から左右に広がる縦の光線群
+        int beams = 14;
+        float spread = Math.min(1f, elapsed / 25f);  // 0→1で広がる
+        int cx = fieldWidth / 2;
+        float baseAlpha = 0.55f * endFade;
+        for (int i = 0; i < beams; i++) {
+            float t = (i + 1) / (float) beams;
+            int offset = (int) (t * fieldWidth * 0.55f * spread);
+            int width = 6 + (int) ((1 - t) * 14);
+            float beamAlpha = baseAlpha * (1f - t * 0.5f);
+            // 左右対称に描画
+            for (int side = -1; side <= 1; side += 2) {
+                int bx = cx + offset * side;
+                g.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, beamAlpha));
+                // 中心ライン (明るい青白)
+                g.setColor(new Color(220, 240, 255));
+                g.fillRect(bx - width / 4, 0, Math.max(1, width / 2), fieldHeight);
+                // 周辺のソフトな広がり
+                g.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, beamAlpha * 0.35f));
+                g.setColor(new Color(140, 200, 255));
+                g.fillRect(bx - width / 2, 0, width, fieldHeight);
+            }
+        }
+        // 中央太線
+        g.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.7f * endFade));
+        g.setColor(new Color(255, 255, 255));
+        g.fillRect(cx - 2, 0, 4, fieldHeight);
+        g.setComposite(oldComp);
+    }
+
+    /** 中央のキャラ画像。リムグロー＋少しの揺れを加える。 */
+    private void drawBombCharacterImage(Graphics2D g, int fieldWidth, int fieldHeight,
+                                        BufferedImage img, int elapsed, int remaining, float endFade) {
+        // 中盤の画像アルファ
+        float baseAlpha;
+        if (elapsed < 30) baseAlpha = 0.95f;
+        else if (elapsed < 60) baseAlpha = 0.95f - (elapsed - 30) / 30f * 0.35f; // 0.95→0.6
+        else baseAlpha = 0.6f;
+        float imgAlpha = baseAlpha * endFade;
+
+        // 画像をフィールド高さの90%程度に収まるサイズに(縦長前提)
+        double maxH = fieldHeight * 0.92;
+        double maxW = fieldWidth * 0.95;
+        double scale = Math.min(maxW / img.getWidth(), maxH / img.getHeight());
+        // 発動直後だけ少し拡大→落ち着く(zoom演出)
+        double zoom = 1.0 + 0.08 * Math.max(0, 1 - elapsed / 20.0);
+        int drawW = (int) (img.getWidth() * scale * zoom);
+        int drawH = (int) (img.getHeight() * scale * zoom);
+        // 少し縦に揺らす(衝撃感)
+        int shakeY = elapsed < 15 ? (int) (Math.sin(elapsed * 1.5) * 4) : 0;
+        int drawX = (fieldWidth - drawW) / 2;
+        int drawY = (fieldHeight - drawH) / 2 + shakeY;
+
+        Composite oldComp = g.getComposite();
+
+        // リムグロー(画像を少し大きく明るい色で重ねてアウター)
+        for (int rim = 3; rim >= 1; rim--) {
+            float rimAlpha = imgAlpha * 0.18f * rim;
+            g.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, rimAlpha));
+            int rw = drawW + rim * 10;
+            int rh = drawH + rim * 10;
+            int rx = (fieldWidth - rw) / 2;
+            int ry = drawY - rim * 5;
+            // 明るい色で薄く塗る四角(画像形にぴったり合わせるのは難しいので近似)
+            g.setColor(new Color(255, 240, 200));
+            g.fillRoundRect(rx, ry, rw, rh, 18, 18);
+        }
+
+        // 本体
+        g.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, imgAlpha));
+        g.drawImage(img, drawX, drawY, drawW, drawH, null);
+
+        // 上から明るいオーバーレイ(発動直後のみ)で「光に包まれた」感
+        if (elapsed < 25) {
+            float overlay = (1f - elapsed / 25f) * 0.4f * endFade;
+            g.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, overlay));
+            g.setColor(new Color(255, 250, 220));
+            g.fillRect(drawX, drawY, drawW, drawH);
+        }
+        g.setComposite(oldComp);
+    }
+
+    /** 周囲のスパーク粒子。経過時間でアニメーション。 */
+    private void drawBombSparkles(Graphics2D g, int fieldWidth, int fieldHeight, int elapsed, float endFade) {
+        Composite oldComp = g.getComposite();
+        // 決定論的な疑似乱数(seedに経過を加味)で位置を生成
+        java.util.Random r = new java.util.Random(91827364L);
+        int count = 60;
+        for (int i = 0; i < count; i++) {
+            // 個々の粒子のサイクル(0..1)
+            int lifeOffset = (i * 7) % 60;
+            int life = (elapsed + lifeOffset) % 60;
+            float t = life / 60f;
+
+            // 出現位置(中央付近を避ける)
+            float ax = r.nextFloat();
+            float ay = r.nextFloat();
+            float drift = r.nextFloat() * 0.5f + 0.5f;
+            int px = (int) (ax * fieldWidth);
+            int py = (int) (ay * fieldHeight + drift * t * 20f) % fieldHeight;
+
+            // ライフカーブ: 0→ピーク→0
+            float alphaCurve = (float) Math.sin(t * Math.PI);
+            float sparkleAlpha = alphaCurve * 0.9f * endFade;
+            if (sparkleAlpha <= 0.02f) continue;
+
+            int size = 2 + (int) (alphaCurve * 3);
+            g.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, sparkleAlpha));
+            // 中心の明るい点
+            g.setColor(new Color(255, 255, 240));
+            g.fillOval(px - size / 2, py - size / 2, size, size);
+            // 4方向の小さなフレア(十字)
+            g.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, sparkleAlpha * 0.6f));
+            g.setColor(new Color(200, 220, 255));
+            g.fillRect(px - size, py, size * 2, 1);
+            g.fillRect(px, py - size, 1, size * 2);
+        }
+        g.setComposite(oldComp);
     }
 }

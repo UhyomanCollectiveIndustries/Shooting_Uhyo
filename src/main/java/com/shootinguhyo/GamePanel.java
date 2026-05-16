@@ -111,6 +111,15 @@ public class GamePanel extends JPanel implements Runnable {
 
     private Boss.Phase lastBossPhase = null;
 
+    // ボム(スペルカード)ダメージ管理
+    private boolean prevBombing = false;          // 前フレームのbombing状態(立ち上がり検出用)
+    private int bombDamageTickFrame = 0;          // ボム継続中のダメージ間隔カウンタ
+    private static final int BOMB_BURST_DAMAGE_ENEMY = 600;  // 発動瞬間の全敵への一撃
+    private static final int BOMB_BURST_DAMAGE_BOSS  = 300;  // 発動瞬間のボスへの一撃
+    private static final int BOMB_TICK_DAMAGE_ENEMY  = 80;   // ボム持続中の連続ダメージ(敵)
+    private static final int BOMB_TICK_DAMAGE_BOSS   = 35;   // ボム持続中の連続ダメージ(ボス)
+    private static final int BOMB_TICK_INTERVAL      = 8;    // ティック間隔(フレーム)
+
     // メニュー位置
     private final String[] titleMenu = {
             "Start", "Extra Start", "Practice Start", "Replay",
@@ -472,6 +481,8 @@ public class GamePanel extends JPanel implements Runnable {
             audio.playSe(AudioManager.Se.BOMB);
         }
 
+        applyBombDamage();
+
         if (input.isJustPressed(KeyEvent.VK_ESCAPE)) {
             prevGameState = gameState;
             gameState = GameState.PAUSED;
@@ -521,6 +532,8 @@ public class GamePanel extends JPanel implements Runnable {
         if (input.isJustPressed(KeyEvent.VK_X)) {
             audio.playSe(AudioManager.Se.BOMB);
         }
+
+        applyBombDamage();
 
         if (input.isJustPressed(KeyEvent.VK_ESCAPE)) {
             prevGameState = gameState;
@@ -645,6 +658,63 @@ public class GamePanel extends JPanel implements Runnable {
             audio.playTitleBgm();
             gameState = GameState.TITLE;
         }
+    }
+
+    // ===================== BOMB DAMAGE =====================
+
+    /**
+     * ボム(スペルカード)発動中、画面上の敵とボスにダメージを与える。
+     * - 発動の瞬間(立ち上がり)に強い一撃を全体に
+     * - 持続中は一定間隔で継続ダメージ
+     * 既存の弾消し(updateBullets内のplayer.isBombing()判定)はそのまま動作する。
+     */
+    private void applyBombDamage() {
+        boolean bombing = player != null && player.isBombing();
+
+        // 立ち上がり：発動の瞬間
+        if (bombing && !prevBombing) {
+            // 画面上の全雑魚に一撃(画面上の雑魚はだいたい倒せる威力)
+            for (Enemy e : enemies) {
+                if (e.active && !e.isDefeated()) {
+                    e.takeDamage(BOMB_BURST_DAMAGE_ENEMY);
+                }
+            }
+            for (FastEnemy fe : fastEnemies) {
+                if (fe.active && !fe.isDefeated()) {
+                    fe.takeDamage(BOMB_BURST_DAMAGE_ENEMY);
+                }
+            }
+            // ボスにも一撃
+            if (boss != null && !boss.isDefeated()) {
+                boss.takeDamage(BOMB_BURST_DAMAGE_BOSS);
+            }
+            bombDamageTickFrame = 0;
+        }
+
+        // 継続ダメージ
+        if (bombing) {
+            bombDamageTickFrame++;
+            if (bombDamageTickFrame >= BOMB_TICK_INTERVAL) {
+                bombDamageTickFrame = 0;
+                for (Enemy e : enemies) {
+                    if (e.active && !e.isDefeated()) {
+                        e.takeDamage(BOMB_TICK_DAMAGE_ENEMY);
+                    }
+                }
+                for (FastEnemy fe : fastEnemies) {
+                    if (fe.active && !fe.isDefeated()) {
+                        fe.takeDamage(BOMB_TICK_DAMAGE_ENEMY);
+                    }
+                }
+                if (boss != null && !boss.isDefeated()) {
+                    boss.takeDamage(BOMB_TICK_DAMAGE_BOSS);
+                }
+            }
+        } else {
+            bombDamageTickFrame = 0;
+        }
+
+        prevBombing = bombing;
     }
 
     // ===================== ENTITY UPDATE HELPERS =====================
