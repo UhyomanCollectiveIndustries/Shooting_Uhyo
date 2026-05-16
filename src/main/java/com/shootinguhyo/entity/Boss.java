@@ -250,9 +250,9 @@ public class Boss extends Entity {
      */
     public String getSpellName() {
         return switch (phase) {
-            case SPELL1 -> "夢符『幻想の弾幕』";
-            case SPELL2 -> "花符『桜吹雪』";
-            case SPELL3 -> "靈符『幻想の結界』";
+            case SPELL1 -> "カス(1文)";
+            case SPELL2 -> "タネ(1文)";
+            case SPELL3 -> "短冊(1文)";
             default -> "";
         };
     }
