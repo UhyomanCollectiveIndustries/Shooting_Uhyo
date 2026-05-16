@@ -80,13 +80,13 @@ public class HUD {
         for (int i = 0; i < player.getBombs(); i++) bombs.append("◆");
         g.drawString(bombs.toString(), x, y + 16);
 
-        // POWER：0〜125のP値を整数で表示。次の閾値マークも併記する
+        // POWER：0〜125のP値を小数点1桁で表示。次の閾値マークも併記する
         y += 40;
         g.setColor(new Color(200, 180, 255));
         g.drawString("POWER", x, y);
-        int p = player.getPower();
+        double p = player.getPower();
         g.setColor(Color.WHITE);
-        g.drawString(String.format("%3d / 125", p), x, y + 16);
+        g.drawString(String.format("%.1f / 125", p), x, y + 16);
         // 閾値到達ドット(10/20/50/125)
         int dotY = y + 24;
         int[] tiers = {10, 20, 50, 125};

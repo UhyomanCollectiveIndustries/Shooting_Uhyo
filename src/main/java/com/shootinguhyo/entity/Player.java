@@ -40,7 +40,7 @@ public class Player extends Entity {
 
     private int lives = 3;   // 残機
     private int bombs = 3;   // ボム所持数
-    private int power = 0;   // パワー(0-400)。100,200,300,400で弾数が変わる
+    private double power = 0; // パワー(0-125)。小P=0.5、大P=1.5で積み上げる
     private long score = 0;  // スコア(longにすることで桁あふれを防ぐ)
     private int graze = 0;   // 弾を掠った回数
 
@@ -257,8 +257,8 @@ public class Player extends Entity {
     }
 
     /** パワー上限。P=125 が最大(東方EoSDライク)。 */
-    public static final int POWER_MAX = 125;
-    public void addPower(int amount) { power = Math.min(POWER_MAX, power + amount); }
+    public static final double POWER_MAX = 125;
+    public void addPower(double amount) { power = Math.min(POWER_MAX, power + amount); }
     public void addScore(long amount) { score += amount; }
     public void addGraze(int amount) { graze += amount; }
 
@@ -270,7 +270,7 @@ public class Player extends Entity {
 
     public int getLives() { return lives; }
     public int getBombs() { return bombs; }
-    public int getPower() { return power; }
+    public double getPower() { return power; }
     public long getScore() { return score; }
     public int getGraze() { return graze; }
     public double getHitboxRadius() { return hitboxRadius(); }

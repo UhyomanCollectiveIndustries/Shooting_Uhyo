@@ -105,7 +105,7 @@ public class Uhyowoman implements PlayerCharacter {
     /**
      * フォーカス時の弾数。P=10で1→3、その後拡張。
      */
-    private static int focusWaysForPower(int power) {
+    private static int focusWaysForPower(double power) {
         if (power >= 125) return 7;
         if (power >= 50)  return 5;
         if (power >= 20)  return 4;
@@ -114,7 +114,7 @@ public class Uhyowoman implements PlayerCharacter {
     }
 
     /** 通常時の弾数。 */
-    private static int normalWaysForPower(int power) {
+    private static int normalWaysForPower(double power) {
         if (power >= 125) return 5;
         if (power >= 50)  return 4;
         if (power >= 20)  return 3;
@@ -126,7 +126,7 @@ public class Uhyowoman implements PlayerCharacter {
      * 通常ショットの生成。前方集中型。
      */
     @Override
-    public List<PlayerBullet> createShot(double x, double y, int power, boolean focus) {
+    public List<PlayerBullet> createShot(double x, double y, double power, boolean focus) {
         List<PlayerBullet> bullets = new ArrayList<>();
         int dmg = BASE_DAMAGE;
         double speed = 14.0;
@@ -161,7 +161,7 @@ public class Uhyowoman implements PlayerCharacter {
      */
     @Override
     public void updateOptions(Player p, boolean focus, List<PlayerBullet> newBullets) {
-        int power = p.getPower();
+        double power = p.getPower();
         boolean active = power >= 20;
         p.leftOption.active = active;
         p.rightOption.active = active;

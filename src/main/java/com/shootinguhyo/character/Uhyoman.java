@@ -108,7 +108,7 @@ public class Uhyoman implements PlayerCharacter {
      * パワー値から本数を決める。
      *   P<10 :3, P>=10:4, P>=20:5, P>=50:6, P>=125:7
      */
-    private static int waysForPower(int power) {
+    private static int waysForPower(double power) {
         if (power >= 125) return 7;
         if (power >= 50)  return 6;
         if (power >= 20)  return 5;
@@ -120,7 +120,7 @@ public class Uhyoman implements PlayerCharacter {
      * 通常ショットの生成。本数はパワーで増える。
      */
     @Override
-    public List<PlayerBullet> createShot(double x, double y, int power, boolean focus) {
+    public List<PlayerBullet> createShot(double x, double y, double power, boolean focus) {
         List<PlayerBullet> bullets = new ArrayList<>();
         int dmg = BASE_DAMAGE;
         double speed = 12.0;
@@ -156,7 +156,7 @@ public class Uhyoman implements PlayerCharacter {
      */
     @Override
     public void updateOptions(Player p, boolean focus, List<PlayerBullet> newBullets) {
-        int power = p.getPower();
+        double power = p.getPower();
         boolean active = power >= 20;
         p.leftOption.active = active;
         p.rightOption.active = active;

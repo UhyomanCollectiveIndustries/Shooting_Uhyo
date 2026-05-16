@@ -56,11 +56,11 @@ public interface PlayerCharacter {
      *
      * @param x 自機x座標
      * @param y 自機y座標
-     * @param power 現在のパワー値(0-400)
+     * @param power 現在のパワー値(0-125)
      * @param focus フォーカスモード中か
      * @return 発射する弾のリスト
      */
-    List<PlayerBullet> createShot(double x, double y, int power, boolean focus);
+    List<PlayerBullet> createShot(double x, double y, double power, boolean focus);
 
     /**
      * ボム(スペル)を発動。

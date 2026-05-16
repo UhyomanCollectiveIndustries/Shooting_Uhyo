@@ -599,6 +599,11 @@ public class GamePanel extends JPanel implements Runnable {
         updateParticles();
 
         if (!bossDefeatEffect.isActive()) {
+            // ステージクリアボーナス加算：ステージ基準×グレイズ×残機×難易度
+            long stageBase = stageManager.getCurrentStage() * 1000L;
+            long bonus = (long)(stageBase * Math.max(1, player.getGraze())
+                    * player.getLives() * Difficulty.current().enemyHpMul);
+            player.addScore(bonus);
             // ポストボス会話へ
             startDialog(false);
         }
@@ -758,7 +763,7 @@ public class GamePanel extends JPanel implements Runnable {
             if (e.isDefeated()) {
                 createExplosion((int) e.x, (int) e.y, 12, new Color(180, 100, 255));
                 // 12%の確率で大P(価値+3)、それ以外は通常P(価値+1)
-                boolean bigPower = rand.nextInt(100) < 12;
+                boolean bigPower = rand.nextInt(100) < 10;
                 items.add(new Item(e.x, e.y, Item.ItemType.POWER, bigPower));
                 items.add(new Item(e.x + 8, e.y, Item.ItemType.POINT));
                 player.addScore(e.getScore());
@@ -858,8 +863,8 @@ public class GamePanel extends JPanel implements Runnable {
 
             if (MathUtil.distance(item.x, item.y, player.x, player.y) < player.getHitboxRadius() + item.getRadius()) {
                 if (item.getType() == Item.ItemType.POWER) {
-                    // 通常P=+1、大P=+3。Stage1で簡単に満タンにならないよう控えめに。
-                    player.addPower(item.isBig() ? 3 : 1);
+                    // 通常P=+0.5、大P=+1.5。Stage1終盤でP75前後になる設計。
+                    player.addPower(item.isBig() ? 1.5 : 0.5);
                 } else {
                     player.addScore(100);
                 }
