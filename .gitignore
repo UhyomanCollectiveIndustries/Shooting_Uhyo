@@ -42,3 +42,4 @@ Thumbs.db
 *.log
 Reference_material/*
 .claude/settings.local.json
+src/main/java/com/shootinguhyo/pictures/*
