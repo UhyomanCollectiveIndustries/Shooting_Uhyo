@@ -29,11 +29,11 @@
    ```
    cd Shooting_Uhyo
     ```
-3. build the project useing maven:
+3. build the project useing maven:  
     ```
     mvn clean package
      ```
-4. Run the game:
+4. Run the game:  
     ```
     java -jar target/Shooting_Uhyo.jar
      ```
