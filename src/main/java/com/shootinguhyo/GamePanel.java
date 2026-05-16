@@ -841,8 +841,8 @@ public class GamePanel extends JPanel implements Runnable {
 
             double dist = MathUtil.distance(eb.x, eb.y, player.x, player.y);
             if (dist < 16 && dist > player.getHitboxRadius() + eb.getRadius()) {
-                player.addGraze(1);
-                player.addScore(100);
+                player.addGraze(1); // グレイズ加算
+                player.addScore(10000); // グレイズのスコア
             }
 
             if (!player.isInvincible() && dist < player.getHitboxRadius() + eb.getRadius()) {
@@ -866,7 +866,7 @@ public class GamePanel extends JPanel implements Runnable {
                     // 通常P=+0.5、大P=+1.5。Stage1終盤でP75前後になる設計。
                     player.addPower(item.isBig() ? 1.5 : 0.5);
                 } else {
-                    player.addScore(100);
+                    player.addScore(10000); // ポイントアイテムは1万点固定
                 }
                 audio.playSe(AudioManager.Se.ITEM);
                 ii.remove();
@@ -1026,7 +1026,7 @@ public class GamePanel extends JPanel implements Runnable {
         // フッタ：著作権風
         g.setFont(new Font("Serif", Font.PLAIN, 11));
         g.setColor(new Color(180, 180, 200));
-        String copyright = "(C) 2026  Shooting Uhyo Project";
+        String copyright = "(C) 2026  UhyomanCollectiveIndustries";
         FontMetrics fm = g.getFontMetrics();
         g.drawString(copyright, (PANEL_WIDTH - fm.stringWidth(copyright)) / 2, PANEL_HEIGHT - 18);
     }
@@ -1428,9 +1428,8 @@ public class GamePanel extends JPanel implements Runnable {
         String[] lines = {
                 "～ ENDING ～",
                 "",
-                "全6ステージを踏破した。",
                 "悪の組織アンチうひょは",
-                "幻想郷から去っていった…",
+                "うひょ星から去っていった…",
                 "",
                 "(あなたのエンディング演出をここに書く)",
                 "",
