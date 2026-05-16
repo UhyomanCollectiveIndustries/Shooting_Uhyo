@@ -757,7 +757,9 @@ public class GamePanel extends JPanel implements Runnable {
 
             if (e.isDefeated()) {
                 createExplosion((int) e.x, (int) e.y, 12, new Color(180, 100, 255));
-                items.add(new Item(e.x, e.y, Item.ItemType.POWER));
+                // 12%の確率で大P(価値+3)、それ以外は通常P(価値+1)
+                boolean bigPower = rand.nextInt(100) < 12;
+                items.add(new Item(e.x, e.y, Item.ItemType.POWER, bigPower));
                 items.add(new Item(e.x + 8, e.y, Item.ItemType.POINT));
                 player.addScore(e.getScore());
                 audio.playSe(AudioManager.Se.EXPLOSION);
@@ -774,7 +776,9 @@ public class GamePanel extends JPanel implements Runnable {
 
             if (fe.isDefeated()) {
                 createExplosion((int) fe.x, (int) fe.y, 10, new Color(0, 200, 200));
-                items.add(new Item(fe.x, fe.y, Item.ItemType.POWER));
+                // FastEnemyは小さいので大Pの確率も低め(8%)
+                boolean bigPower = rand.nextInt(100) < 8;
+                items.add(new Item(fe.x, fe.y, Item.ItemType.POWER, bigPower));
                 player.addScore(fe.getScore());
                 audio.playSe(AudioManager.Se.EXPLOSION);
             }
@@ -854,8 +858,8 @@ public class GamePanel extends JPanel implements Runnable {
 
             if (MathUtil.distance(item.x, item.y, player.x, player.y) < player.getHitboxRadius() + item.getRadius()) {
                 if (item.getType() == Item.ItemType.POWER) {
-                    // P値スケールが0〜125なので 1個=+5(満タンまで25個)
-                    player.addPower(5);
+                    // 通常P=+1、大P=+3。Stage1で簡単に満タンにならないよう控えめに。
+                    player.addPower(item.isBig() ? 3 : 1);
                 } else {
                     player.addScore(100);
                 }

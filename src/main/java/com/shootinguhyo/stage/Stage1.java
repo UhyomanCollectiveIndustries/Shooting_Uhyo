@@ -7,60 +7,59 @@ import java.util.List;
 /**
  * Stage1：1面の進行を管理する具体クラス。
  *
- * <p>全長 約3分(10800フレーム / 60FPS)。
- *  序盤ステージなので、弾幕は軽め(Enemy#withLightShot)に設定して
- *  プレイヤーが操作に慣れるための余白を作る。</p>
+ * <p>全長 約1:30(5400フレーム / 60FPS)。
+ *  序盤ステージなので弾幕は軽め(Enemy#withLightShot)に抑えるが、
+ *  中盤〜終盤にかけて出現する敵の数は増やして、間延びしないようにする。</p>
  *
  * <p>時間進行(秒):
- *  0:00～0:30   軽い列・高速敵が断続的に
- *  0:30～1:30   雑魚＋高速敵が混じり始める
- *  1:30～2:30   密度が少しずつ上がる
- *  2:30～3:00   駆け込みで連続出現 → ボス
+ *  0:00〜0:20 (0〜1200)  序盤: 軽い波が断続的に
+ *  0:20〜0:50 (1200〜3000) 中盤: 敵の数が増え始める
+ *  0:50〜1:20 (3000〜4800) 終盤: 雑魚＋高速敵が同時にやってくる
+ *  1:20〜1:30 (4800〜5400) ボス直前のラッシュ
  *  </p>
  */
 public class Stage1 implements Stage {
-    /** ボス出現タイミング(60FPS換算で約3分)。 */
-    private static final int BOSS_FRAME = 10800;
+    /** ボス出現タイミング(約1分30秒)。 */
+    private static final int BOSS_FRAME = 5400;
 
     @Override
     public void update(int frame, List<Enemy> enemies, List<FastEnemy> fastEnemies) {
-        // ----- 序盤(0:00〜0:30, 0〜1800) -----
-        if (frame == 120)   spawnEnemyRow(enemies, 3);
-        if (frame == 360)   spawnFastEnemies(fastEnemies, 2);
-        if (frame == 600)   spawnEnemyRow(enemies, 3);
-        if (frame == 900)   spawnFastEnemies(fastEnemies, 3);
-        if (frame == 1200)  spawnEnemyDiamond(enemies, 4);
-        if (frame == 1500)  spawnFastEnemies(fastEnemies, 3);
+        // ----- 序盤(0〜1200, 0:00〜0:20) -----
+        if (frame == 120)  spawnEnemyRow(enemies, 3);
+        if (frame == 360)  spawnFastEnemies(fastEnemies, 2);
+        if (frame == 600)  spawnEnemyRow(enemies, 3);
+        if (frame == 840)  spawnFastEnemies(fastEnemies, 3);
+        if (frame == 1080) spawnEnemyDiamond(enemies, 4);
 
-        // ----- 中盤前半(0:30〜1:30, 1800〜5400) -----
-        if (frame >= 1800 && frame < 5400 && (frame - 1800) % 360 == 0) {
-            int phase = ((frame - 1800) / 360) % 4;
-            switch (phase) {
-                case 0 -> spawnEnemyRow(enemies, 4);
-                case 1 -> spawnFastEnemies(fastEnemies, 3);
-                case 2 -> spawnEnemyDiamond(enemies, 4);
-                case 3 -> spawnFastEnemies(fastEnemies, 4);
-            }
-        }
-
-        // ----- 中盤後半(1:30〜2:30, 5400〜9000) -----
-        if (frame >= 5400 && frame < 9000 && (frame - 5400) % 300 == 0) {
-            int phase = ((frame - 5400) / 300) % 4;
-            switch (phase) {
-                case 0 -> spawnEnemyRow(enemies, 5);
-                case 1 -> spawnFastEnemies(fastEnemies, 4);
-                case 2 -> { spawnEnemyDiamond(enemies, 4); spawnFastEnemies(fastEnemies, 2); }
-                case 3 -> spawnEnemyRow(enemies, 4);
-            }
-        }
-
-        // ----- 駆け込み(2:30〜3:00, 9000〜10800) -----
-        if (frame >= 9000 && frame < BOSS_FRAME && (frame - 9000) % 240 == 0) {
-            int phase = ((frame - 9000) / 240) % 3;
+        // ----- 中盤(1200〜3000, 0:20〜0:50) — 240F間隔、敵を増やす -----
+        if (frame >= 1200 && frame < 3000 && (frame - 1200) % 240 == 0) {
+            int phase = ((frame - 1200) / 240) % 4;
             switch (phase) {
                 case 0 -> { spawnEnemyRow(enemies, 5); spawnFastEnemies(fastEnemies, 2); }
                 case 1 -> spawnFastEnemies(fastEnemies, 5);
-                case 2 -> spawnEnemyDiamond(enemies, 4);
+                case 2 -> { spawnEnemyDiamond(enemies, 4); spawnFastEnemies(fastEnemies, 2); }
+                case 3 -> spawnEnemyRow(enemies, 6);
+            }
+        }
+
+        // ----- 終盤(3000〜4800, 0:50〜1:20) — 200F間隔、雑魚＋高速敵が同時に -----
+        if (frame >= 3000 && frame < 4800 && (frame - 3000) % 200 == 0) {
+            int phase = ((frame - 3000) / 200) % 4;
+            switch (phase) {
+                case 0 -> { spawnEnemyRow(enemies, 6); spawnFastEnemies(fastEnemies, 3); }
+                case 1 -> { spawnEnemyDiamond(enemies, 4); spawnFastEnemies(fastEnemies, 4); }
+                case 2 -> spawnFastEnemies(fastEnemies, 6);
+                case 3 -> { spawnEnemyRow(enemies, 5); spawnEnemyDiamond(enemies, 4); }
+            }
+        }
+
+        // ----- 直前ラッシュ(4800〜5400, 1:20〜1:30) — 150F間隔の駆け込み -----
+        if (frame >= 4800 && frame < BOSS_FRAME && (frame - 4800) % 150 == 0) {
+            int phase = ((frame - 4800) / 150) % 3;
+            switch (phase) {
+                case 0 -> { spawnEnemyRow(enemies, 6); spawnFastEnemies(fastEnemies, 3); }
+                case 1 -> spawnFastEnemies(fastEnemies, 6);
+                case 2 -> { spawnEnemyDiamond(enemies, 4); spawnFastEnemies(fastEnemies, 4); }
             }
         }
     }
