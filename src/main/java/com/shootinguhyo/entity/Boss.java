@@ -33,9 +33,9 @@ public class Boss extends Entity {
     private Phase phase = Phase.PHASE1;
     // 各フェーズで個別のHP上限を持つ(難易度バランス調整しやすい設計)
     private int phase1Hp = 5000;
-    private int spell1Hp = 4000;
-    private int spell2Hp = 4000;
-    private int spell3Hp = 6000;
+    private int spell1Hp = 10000;
+    private int spell2Hp = 15000;
+    private int spell3Hp = 25000;
     private int currentHp;
     private int maxHp;
 
