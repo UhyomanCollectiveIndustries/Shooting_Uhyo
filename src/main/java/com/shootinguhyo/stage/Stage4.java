@@ -2,6 +2,12 @@ package com.shootinguhyo.stage;
 
 import com.shootinguhyo.entity.Enemy;
 import com.shootinguhyo.entity.FastEnemy;
+import com.shootinguhyo.entity.bullet.EnemyBullet;
+import com.shootinguhyo.pattern.SpiralPattern;
+import com.shootinguhyo.pattern.SwitchbackPattern;
+import com.shootinguhyo.pattern.WinderPattern;
+
+import java.awt.Color;
 import java.util.List;
 
 /**
@@ -33,10 +39,29 @@ public class Stage4 implements Stage {
         }
     }
 
+    /**
+     * Stage4の列: 中央のリーダー1体が切り返し弾(SwitchbackPattern)、
+     * 列の端2体がワインダーとスパイラル、残りは通常Radial。
+     */
     private void spawnLine(List<Enemy> enemies, int count) {
+        int mid = count / 2;
         for (int i = 0; i < count; i++) {
             double x = 50.0 + (280.0 / (count + 1)) * (i + 1);
-            enemies.add(new Enemy(x, -20, 250, 350));
+            Enemy e = new Enemy(x, -20, 250, 350);
+            if (i == mid) {
+                e.withPattern(SwitchbackPattern.standard(2.6),
+                        new Color(255, 220, 100), EnemyBullet.BulletSize.SMALL)
+                 .withInterval(30);
+            } else if (i == 0) {
+                e.withPattern(WinderPattern.downward(45, 2.6),
+                        new Color(120, 220, 255), EnemyBullet.BulletSize.SMALL)
+                 .withInterval(45);
+            } else if (i == count - 1) {
+                e.withPattern(new SpiralPattern(0.22, 6, 2.2),
+                        new Color(255, 130, 80), EnemyBullet.BulletSize.SMALL)
+                 .withInterval(18);
+            }
+            enemies.add(e);
         }
     }
 

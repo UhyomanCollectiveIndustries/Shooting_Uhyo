@@ -2,6 +2,11 @@ package com.shootinguhyo.stage;
 
 import com.shootinguhyo.entity.Enemy;
 import com.shootinguhyo.entity.FastEnemy;
+import com.shootinguhyo.entity.bullet.EnemyBullet;
+import com.shootinguhyo.pattern.SpiralPattern;
+import com.shootinguhyo.pattern.WinderPattern;
+
+import java.awt.Color;
 import java.util.List;
 
 /**
@@ -27,14 +32,32 @@ public class Stage3 implements Stage {
         }
     }
 
+    /** 序盤: 通常雑魚＋FastEnemy。1体だけワインダー。 */
     private void spawnLightPair(List<Enemy> enemies, List<FastEnemy> fastEnemies) {
-        enemies.add(new Enemy(150, -20, 200, 300));
+        Enemy w = new Enemy(150, -20, 200, 300);
+        w.withPattern(WinderPattern.downward(40, 2.4),
+                new Color(120, 220, 255), EnemyBullet.BulletSize.SMALL)
+         .withInterval(60);
+        enemies.add(w);
         fastEnemies.add(new FastEnemy(-20, 120, 3.0, 1.5));
     }
 
+    /** 中盤以降: ワインダー＋うずまき(スパイラル)を混ぜる。 */
     private void spawnPair(List<Enemy> enemies, List<FastEnemy> fastEnemies) {
-        enemies.add(new Enemy(100, -20, 200, 300));
-        enemies.add(new Enemy(284, -20, 200, 300));
+        // 左:ワインダー
+        Enemy left = new Enemy(100, -20, 200, 300);
+        left.withPattern(WinderPattern.downward(45, 2.4),
+                new Color(120, 220, 255), EnemyBullet.BulletSize.SMALL)
+            .withInterval(50);
+        enemies.add(left);
+
+        // 右:スパイラル(うずまき)
+        Enemy right = new Enemy(284, -20, 200, 300);
+        right.withPattern(new SpiralPattern(0.18, 6, 2.0),
+                new Color(255, 180, 80), EnemyBullet.BulletSize.SMALL)
+             .withInterval(20);
+        enemies.add(right);
+
         fastEnemies.add(new FastEnemy(-20, 120, 3.0, 1.5));
         fastEnemies.add(new FastEnemy(404, 120, -3.0, 1.5));
     }

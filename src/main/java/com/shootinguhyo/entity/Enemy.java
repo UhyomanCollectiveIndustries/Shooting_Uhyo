@@ -1,6 +1,7 @@
 package com.shootinguhyo.entity;
 
 import com.shootinguhyo.entity.bullet.EnemyBullet;
+import com.shootinguhyo.pattern.BulletPattern;
 import com.shootinguhyo.pattern.RadialPattern;
 
 import java.awt.*;
@@ -34,7 +35,12 @@ public class Enemy extends Entity {
 
     // 弾幕パラメータ(後から書き換え可能。Stage1など軽め敵向け)
     protected int shootInterval = 90;   // 弾を撃つ間隔(フレーム)
-    protected int shootDirections = 8;  // 全方位弾の本数
+    protected int shootDirections = 8;  // 全方位弾の本数(customPattern=null時に使う)
+
+    // パターン差し替え(nullなら従来の RadialPattern)
+    protected BulletPattern customPattern;
+    protected Color bulletColor = new Color(200, 100, 255);
+    protected EnemyBullet.BulletSize bulletSize = EnemyBullet.BulletSize.SMALL;
 
     public Enemy(double x, double y, int hp, int score) {
         super(x, y);
@@ -60,6 +66,21 @@ public class Enemy extends Entity {
         return this;
     }
 
+    /** 専用パターンをセット。色とサイズは引数(null可)。 */
+    public Enemy withPattern(BulletPattern pattern, Color color, EnemyBullet.BulletSize size) {
+        this.customPattern = pattern;
+        if (color != null) this.bulletColor = color;
+        if (size  != null) this.bulletSize = size;
+        return this;
+    }
+    public Enemy withPattern(BulletPattern pattern) {
+        return withPattern(pattern, null, null);
+    }
+    public Enemy withInterval(int frames) {
+        this.shootInterval = Math.max(20, frames);
+        return this;
+    }
+
     /**
      * 敵の1フレーム更新。
      * 移動と弾発射、画面外チェックを行う。
@@ -70,10 +91,16 @@ public class Enemy extends Entity {
         y += 0.8;                                       // 下方向にゆっくり進む
         x = startX + Math.sin(frame * 0.03) * 40;       // 左右にサイン波で揺れる
 
-        // 指定した間隔で全方位弾を撃つ(間隔の半分の位置で撃つことでズレを作る)
+        // 指定した間隔で弾を撃つ(間隔の半分の位置で撃つことでズレを作る)
         if (frame % shootInterval == shootInterval / 2 && hp > 0) {
-            RadialPattern pattern = new RadialPattern(shootDirections, 2.0, frame * 0.1);
-            newBullets.addAll(pattern.generate(x, y, EnemyBullet.BulletSize.SMALL, new Color(200, 100, 255)));
+            if (customPattern != null) {
+                // 差し替えられたパターンを使う
+                newBullets.addAll(customPattern.generate(x, y, bulletSize, bulletColor));
+            } else {
+                // デフォルト: 全方位弾(RadialPattern)
+                RadialPattern pattern = new RadialPattern(shootDirections, 2.0, frame * 0.1);
+                newBullets.addAll(pattern.generate(x, y, bulletSize, bulletColor));
+            }
         }
 
         // 画面下を抜けたら消滅

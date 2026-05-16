@@ -2,6 +2,10 @@ package com.shootinguhyo.stage;
 
 import com.shootinguhyo.entity.Enemy;
 import com.shootinguhyo.entity.FastEnemy;
+import com.shootinguhyo.entity.bullet.EnemyBullet;
+import com.shootinguhyo.pattern.WinderPattern;
+
+import java.awt.Color;
 import java.util.List;
 
 /**
@@ -54,10 +58,22 @@ public class Stage2 implements Stage {
         }
     }
 
+    /**
+     * 列の中央付近の1体だけワインダー弾を撃つ。
+     * 他は従来のRadial(デフォルト)。
+     */
     private void spawnEnemyRow(List<Enemy> list, int count) {
+        int winderIdx = count / 2;
         for (int i = 0; i < count; i++) {
             double x = 60.0 + (260.0 / (count + 1)) * (i + 1);
-            list.add(new Enemy(x, -20, 180, 250));
+            Enemy e = new Enemy(x, -20, 180, 250);
+            if (i == winderIdx) {
+                // 真下を中心に左右にうねる弾
+                e.withPattern(WinderPattern.downward(35, 2.4),
+                        new Color(120, 220, 255), EnemyBullet.BulletSize.SMALL)
+                 .withInterval(60);
+            }
+            list.add(e);
         }
     }
 
