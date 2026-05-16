@@ -5,25 +5,31 @@ import com.shootinguhyo.entity.FastEnemy;
 import java.util.List;
 
 /**
- * Stage3：3面のひな型。
- *
- * 【コンセプト案】
- *  - 雑魚と高速敵が同時出現する複合ステージ
- *  - 背景は「夕暮れの空」イメージ(TODO)
- *
- * 【TODO】
- *  - 専用パターン弾を撃つ「シューター型」雑魚の追加
- *  - 専用ボスとスペルカードの追加
+ * Stage3：3面のひな型。約3分。
+ * 雑魚と高速敵が同時出現する複合ステージ。
  */
 public class Stage3 implements Stage {
-    private static final int BOSS_FRAME = 1500;
+    private static final int BOSS_FRAME = 10800;
 
     @Override
     public void update(int frame, List<Enemy> enemies, List<FastEnemy> fastEnemies) {
-        // TODO: より複雑なスポーンパターンを実装
-        if (frame > 0 && frame < BOSS_FRAME && frame % 150 == 0) {
+        // 序盤(0〜1800) 軽め
+        if (frame > 0 && frame < 1800 && frame % 300 == 0) {
+            spawnLightPair(enemies, fastEnemies);
+        }
+        // 中盤(1800〜7200) 通常
+        if (frame >= 1800 && frame < 7200 && (frame - 1800) % 240 == 0) {
             spawnPair(enemies, fastEnemies);
         }
+        // 後半(7200〜) 密度UP
+        if (frame >= 7200 && frame < BOSS_FRAME && (frame - 7200) % 180 == 0) {
+            spawnPair(enemies, fastEnemies);
+        }
+    }
+
+    private void spawnLightPair(List<Enemy> enemies, List<FastEnemy> fastEnemies) {
+        enemies.add(new Enemy(150, -20, 200, 300));
+        fastEnemies.add(new FastEnemy(-20, 120, 3.0, 1.5));
     }
 
     private void spawnPair(List<Enemy> enemies, List<FastEnemy> fastEnemies) {

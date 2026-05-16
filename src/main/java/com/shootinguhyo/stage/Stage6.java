@@ -5,24 +5,28 @@ import com.shootinguhyo.entity.FastEnemy;
 import java.util.List;
 
 /**
- * Stage6：最終ステージのひな型。
- *
- * 【コンセプト案】
- *  - 雑魚は控えめ、ラスボス戦に重点
- *  - 道中は「決戦への前奏曲」的にしっとり始まり、終盤で激化
- *
- * 【未実装のひな型】
- *  - 最終ボス(ラスボス)とその5〜6個のスペルカード
- *  - 撃破後のエンディング演出への接続
- *  - 専用BGM(タイトルテーマのアレンジを想定)
+ * Stage6：最終ステージのひな型。約3分。
+ * 雑魚は控えめ、決戦への前奏として徐々に密度UP。
  */
 public class Stage6 implements Stage {
-    private static final int BOSS_FRAME = 1500;
+    private static final int BOSS_FRAME = 10800;
 
     @Override
     public void update(int frame, List<Enemy> enemies, List<FastEnemy> fastEnemies) {
-        if (frame > 0 && frame < BOSS_FRAME && frame % 200 == 0) {
+        // 序盤(0〜2400) — しっとり目
+        if (frame > 0 && frame < 2400 && frame % 400 == 0) {
             enemies.add(new Enemy(192, -20, 400, 500));
+        }
+        // 中盤(2400〜7200) — 通常密度
+        if (frame >= 2400 && frame < 7200 && (frame - 2400) % 300 == 0) {
+            enemies.add(new Enemy(192, -20, 400, 500));
+            fastEnemies.add(new FastEnemy(-20, 80, 3.5, 1.5));
+            fastEnemies.add(new FastEnemy(404, 80, -3.5, 1.5));
+        }
+        // 終盤(7200〜) — 激化
+        if (frame >= 7200 && frame < BOSS_FRAME && (frame - 7200) % 200 == 0) {
+            enemies.add(new Enemy(120, -20, 400, 500));
+            enemies.add(new Enemy(264, -20, 400, 500));
             fastEnemies.add(new FastEnemy(-20, 80, 3.5, 1.5));
             fastEnemies.add(new FastEnemy(404, 80, -3.5, 1.5));
         }

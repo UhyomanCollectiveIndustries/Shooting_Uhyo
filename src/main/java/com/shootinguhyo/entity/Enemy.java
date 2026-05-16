@@ -32,6 +32,10 @@ public class Enemy extends Entity {
     protected double startX;     // 横揺れの中心x座標
     protected List<EnemyBullet> newBullets = new ArrayList<>();
 
+    // 弾幕パラメータ(後から書き換え可能。Stage1など軽め敵向け)
+    protected int shootInterval = 90;   // 弾を撃つ間隔(フレーム)
+    protected int shootDirections = 8;  // 全方位弾の本数
+
     public Enemy(double x, double y, int hp, int score) {
         super(x, y);
         // 難易度に応じてHPをスケール
@@ -40,6 +44,20 @@ public class Enemy extends Entity {
         this.maxHp = scaledHp;
         this.score = score;
         this.startX = x;
+    }
+
+    /** 弾幕を軽めに設定する。Stage1など序盤ステージ向け。 */
+    public Enemy withLightShot() {
+        this.shootInterval = 150;
+        this.shootDirections = 5;
+        return this;
+    }
+
+    /** 弾幕設定をカスタマイズ。 */
+    public Enemy withShot(int interval, int directions) {
+        this.shootInterval = Math.max(20, interval);
+        this.shootDirections = Math.max(1, directions);
+        return this;
     }
 
     /**
@@ -52,10 +70,9 @@ public class Enemy extends Entity {
         y += 0.8;                                       // 下方向にゆっくり進む
         x = startX + Math.sin(frame * 0.03) * 40;       // 左右にサイン波で揺れる
 
-        // 90フレームに1回、45フレーム目のタイミングで弾を撃つ
-        // frame % 90 == 45 とすることで「途中の決まったタイミング」になる
-        if (frame % 90 == 45 && hp > 0) {
-            RadialPattern pattern = new RadialPattern(8, 2.0, frame * 0.1);
+        // 指定した間隔で全方位弾を撃つ(間隔の半分の位置で撃つことでズレを作る)
+        if (frame % shootInterval == shootInterval / 2 && hp > 0) {
+            RadialPattern pattern = new RadialPattern(shootDirections, 2.0, frame * 0.1);
             newBullets.addAll(pattern.generate(x, y, EnemyBullet.BulletSize.SMALL, new Color(200, 100, 255)));
         }
 

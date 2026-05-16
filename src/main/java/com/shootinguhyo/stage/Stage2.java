@@ -5,31 +5,42 @@ import com.shootinguhyo.entity.FastEnemy;
 import java.util.List;
 
 /**
- * Stage2：2面のひな型。
+ * Stage2：2面のひな型。約3分。
  *
- * 【コンセプト案】
- *  - 高速敵が増え、横方向の敵の動きが激しくなる
- *  - 中ボス出現タイミングを途中に挟む(TODO)
- *
- * 【TODO】
- *  - 中ボス出現とフェーズ管理
- *  - 専用のBGM/背景設定
- *  - ステージ専用ボスの追加
+ * <p>高速敵が増え、横方向の敵の動きが激しくなる。
+ *  Stage1より弾幕が少しだけ濃い(デフォルトのEnemy)。</p>
  */
 public class Stage2 implements Stage {
-    private static final int BOSS_FRAME = 1200;
+    private static final int BOSS_FRAME = 10800;
 
     @Override
     public void update(int frame, List<Enemy> enemies, List<FastEnemy> fastEnemies) {
-        switch (frame) {
-            case 120 -> spawnFastWave(fastEnemies, 3);
-            case 240 -> spawnEnemyRow(enemies, 4);
-            case 360 -> spawnFastWave(fastEnemies, 4);
-            case 480 -> spawnEnemyRow(enemies, 5);
-            case 600 -> spawnFastWave(fastEnemies, 5);
-            case 720 -> spawnEnemyRow(enemies, 6);
-            case 900 -> spawnFastWave(fastEnemies, 4);
-            // TODO: 中ボス出現
+        // 序盤
+        if (frame == 120)  spawnFastWave(fastEnemies, 3);
+        if (frame == 360)  spawnEnemyRow(enemies, 4);
+        if (frame == 720)  spawnFastWave(fastEnemies, 3);
+        if (frame == 1080) spawnEnemyRow(enemies, 4);
+        if (frame == 1440) spawnFastWave(fastEnemies, 4);
+
+        // 中盤(1800〜7200) — 360フレーム間隔
+        if (frame >= 1800 && frame < 7200 && (frame - 1800) % 360 == 0) {
+            int phase = ((frame - 1800) / 360) % 4;
+            switch (phase) {
+                case 0 -> spawnEnemyRow(enemies, 4);
+                case 1 -> spawnFastWave(fastEnemies, 4);
+                case 2 -> spawnEnemyRow(enemies, 5);
+                case 3 -> spawnFastWave(fastEnemies, 5);
+            }
+        }
+
+        // 後半(7200〜10800) — 280フレーム間隔で密度UP
+        if (frame >= 7200 && frame < BOSS_FRAME && (frame - 7200) % 280 == 0) {
+            int phase = ((frame - 7200) / 280) % 3;
+            switch (phase) {
+                case 0 -> { spawnEnemyRow(enemies, 5); spawnFastWave(fastEnemies, 2); }
+                case 1 -> spawnFastWave(fastEnemies, 5);
+                case 2 -> spawnEnemyRow(enemies, 6);
+            }
         }
     }
 

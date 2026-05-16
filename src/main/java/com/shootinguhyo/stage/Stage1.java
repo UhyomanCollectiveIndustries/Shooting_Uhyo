@@ -7,68 +7,83 @@ import java.util.List;
 /**
  * Stage1：1面の進行を管理する具体クラス。
  *
- * 【役割】
- *  特定のフレーム数(タイミング)で敵を出現させる「タイムテーブル」を提供する。
- *  例えばゲーム開始から120フレーム(=2秒)で通常敵を3体出す、240フレームで高速敵を出す、など。
+ * <p>全長 約3分(10800フレーム / 60FPS)。
+ *  序盤ステージなので、弾幕は軽め(Enemy#withLightShot)に設定して
+ *  プレイヤーが操作に慣れるための余白を作る。</p>
  *
- * 【switchの数値の意味(60FPSなので60フレーム=1秒)】
- *  120 = 2秒、240 = 4秒、360 = 6秒、…と等間隔に敵を出すリズム。
- *  最後の720(=12秒)を超えると、BOSS_FRAME(900=15秒)でボス戦に移行する。
- *
- * 【データ駆動 vs ハードコード】
- *  本当はステージ進行データをファイル(CSVやJSON)から読み込む形にすると拡張しやすいが、
- *  ここでは学習のしやすさを優先して直接コードに書いている。
+ * <p>時間進行(秒):
+ *  0:00～0:30   軽い列・高速敵が断続的に
+ *  0:30～1:30   雑魚＋高速敵が混じり始める
+ *  1:30～2:30   密度が少しずつ上がる
+ *  2:30～3:00   駆け込みで連続出現 → ボス
+ *  </p>
  */
 public class Stage1 implements Stage {
-    private static final int BOSS_FRAME = 900; // ボス出現タイミング(15秒)
+    /** ボス出現タイミング(60FPS換算で約3分)。 */
+    private static final int BOSS_FRAME = 10800;
 
-    /**
-     * フレームに応じて敵を出現させる。
-     * switch式で「決められたタイミング」のみ実行する。
-     */
     @Override
     public void update(int frame, List<Enemy> enemies, List<FastEnemy> fastEnemies) {
-        switch (frame) {
-            case 120 -> spawnEnemyRow(enemies, 3);
-            case 240 -> spawnFastEnemies(fastEnemies, 2);
-            case 360 -> spawnEnemyDiamond(enemies, 4);
-            case 480 -> spawnFastEnemies(fastEnemies, 4);
-            case 600 -> spawnEnemyRow(enemies, 5);
-            case 720 -> spawnFastEnemies(fastEnemies, 3);
+        // ----- 序盤(0:00〜0:30, 0〜1800) -----
+        if (frame == 120)   spawnEnemyRow(enemies, 3);
+        if (frame == 360)   spawnFastEnemies(fastEnemies, 2);
+        if (frame == 600)   spawnEnemyRow(enemies, 3);
+        if (frame == 900)   spawnFastEnemies(fastEnemies, 3);
+        if (frame == 1200)  spawnEnemyDiamond(enemies, 4);
+        if (frame == 1500)  spawnFastEnemies(fastEnemies, 3);
+
+        // ----- 中盤前半(0:30〜1:30, 1800〜5400) -----
+        if (frame >= 1800 && frame < 5400 && (frame - 1800) % 360 == 0) {
+            int phase = ((frame - 1800) / 360) % 4;
+            switch (phase) {
+                case 0 -> spawnEnemyRow(enemies, 4);
+                case 1 -> spawnFastEnemies(fastEnemies, 3);
+                case 2 -> spawnEnemyDiamond(enemies, 4);
+                case 3 -> spawnFastEnemies(fastEnemies, 4);
+            }
+        }
+
+        // ----- 中盤後半(1:30〜2:30, 5400〜9000) -----
+        if (frame >= 5400 && frame < 9000 && (frame - 5400) % 300 == 0) {
+            int phase = ((frame - 5400) / 300) % 4;
+            switch (phase) {
+                case 0 -> spawnEnemyRow(enemies, 5);
+                case 1 -> spawnFastEnemies(fastEnemies, 4);
+                case 2 -> { spawnEnemyDiamond(enemies, 4); spawnFastEnemies(fastEnemies, 2); }
+                case 3 -> spawnEnemyRow(enemies, 4);
+            }
+        }
+
+        // ----- 駆け込み(2:30〜3:00, 9000〜10800) -----
+        if (frame >= 9000 && frame < BOSS_FRAME && (frame - 9000) % 240 == 0) {
+            int phase = ((frame - 9000) / 240) % 3;
+            switch (phase) {
+                case 0 -> { spawnEnemyRow(enemies, 5); spawnFastEnemies(fastEnemies, 2); }
+                case 1 -> spawnFastEnemies(fastEnemies, 5);
+                case 2 -> spawnEnemyDiamond(enemies, 4);
+            }
         }
     }
 
-    /**
-     * 通常敵を横一列に等間隔で配置。
-     * 画面の幅 60〜320 を count+1 等分した位置に敵を置く。
-     * y=-20と画面上端の少し外に出すのは「画面外から登場してくる」演出のため。
-     */
+    /** 通常敵を横一列に等間隔で配置。Stage1の敵は軽い弾幕。 */
     private void spawnEnemyRow(List<Enemy> enemies, int count) {
         for (int i = 0; i < count; i++) {
             double x = 60.0 + (260.0 / (count + 1)) * (i + 1);
-            enemies.add(new Enemy(x, -20, 150, 200));
+            enemies.add(new Enemy(x, -20, 150, 200).withLightShot());
         }
     }
 
-    /**
-     * 通常敵を菱形フォーメーション(◇)で配置。
-     * 位置を2次元配列で直接持っておく方式 → コードがシンプルで読みやすい。
-     */
+    /** 通常敵を菱形フォーメーション(◇)で配置。Stage1の敵は軽い弾幕。 */
     private void spawnEnemyDiamond(List<Enemy> enemies, int count) {
         double[][] positions = {
             {192, -20}, {130, -60}, {254, -60}, {192, -100}
         };
         for (int i = 0; i < Math.min(count, positions.length); i++) {
-            enemies.add(new Enemy(positions[i][0], positions[i][1], 150, 200));
+            enemies.add(new Enemy(positions[i][0], positions[i][1], 150, 200).withLightShot());
         }
     }
 
-    /**
-     * 高速敵を左右交互に画面外から出現させる。
-     * - 偶数番目は左から右へ(vx=+3)
-     * - 奇数番目は右から左へ(vx=-3)
-     * yを少しずつずらして1列に並ばないようにする(視認性のため)。
-     */
+    /** 高速敵を左右交互に画面外から出現させる。 */
     private void spawnFastEnemies(List<FastEnemy> fastEnemies, int count) {
         for (int i = 0; i < count; i++) {
             boolean fromLeft = i % 2 == 0;

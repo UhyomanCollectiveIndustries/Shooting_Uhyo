@@ -5,29 +5,31 @@ import com.shootinguhyo.entity.FastEnemy;
 import java.util.List;
 
 /**
- * Stage4：4面のひな型。中盤の山場ステージ。
- *
- * 【コンセプト案】
- *  - 通常敵HPアップ、攻撃が激化
- *  - 背景は「夜の森」など暗めの雰囲気(TODO)
- *
- * 【TODO 実装すべきもの】
- *  - 敵HPと攻撃頻度の上方修正
- *  - 中ボスフェーズ
- *  - 専用ボス
+ * Stage4：4面のひな型。中盤の山場ステージ。約3分。
  */
 public class Stage4 implements Stage {
-    private static final int BOSS_FRAME = 1800;
+    private static final int BOSS_FRAME = 10800;
 
     @Override
     public void update(int frame, List<Enemy> enemies, List<FastEnemy> fastEnemies) {
-        if (frame > 0 && frame < BOSS_FRAME && frame % 120 == 0) {
-            int idx = frame / 120;
-            if (idx % 2 == 0) {
-                spawnLine(enemies, 5);
-            } else {
-                spawnFastSwarm(fastEnemies, 4);
-            }
+        // 序盤(0〜1800)
+        if (frame > 0 && frame < 1800 && frame % 240 == 0) {
+            int idx = frame / 240;
+            if (idx % 2 == 0) spawnLine(enemies, 4);
+            else              spawnFastSwarm(fastEnemies, 3);
+        }
+        // 中盤(1800〜7200) — 200フレーム間隔
+        if (frame >= 1800 && frame < 7200 && (frame - 1800) % 200 == 0) {
+            int idx = (frame - 1800) / 200;
+            if (idx % 2 == 0) spawnLine(enemies, 5);
+            else              spawnFastSwarm(fastEnemies, 4);
+        }
+        // 後半(7200〜) 同時出現
+        if (frame >= 7200 && frame < BOSS_FRAME && (frame - 7200) % 180 == 0) {
+            int idx = (frame - 7200) / 180;
+            if (idx % 3 == 0) { spawnLine(enemies, 5); spawnFastSwarm(fastEnemies, 2); }
+            else if (idx % 3 == 1) spawnFastSwarm(fastEnemies, 5);
+            else spawnLine(enemies, 6);
         }
     }
 
