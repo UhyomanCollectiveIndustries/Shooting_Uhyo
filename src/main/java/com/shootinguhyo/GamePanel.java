@@ -476,6 +476,7 @@ public class GamePanel extends JPanel implements Runnable {
         updateStars();
         stageFrame++;
 
+        updateNearestTarget();
         player.update(input);
         if (input.isJustPressed(KeyEvent.VK_X)) {
             audio.playSe(AudioManager.Se.BOMB);
@@ -528,6 +529,7 @@ public class GamePanel extends JPanel implements Runnable {
         updateStars();
         stageFrame++;
 
+        updateNearestTarget();
         player.update(input);
         if (input.isJustPressed(KeyEvent.VK_X)) {
             audio.playSe(AudioManager.Se.BOMB);
@@ -658,6 +660,33 @@ public class GamePanel extends JPanel implements Runnable {
             audio.playTitleBgm();
             gameState = GameState.TITLE;
         }
+    }
+
+    // ===================== NEAREST TARGET =====================
+
+    /**
+     * 最寄りの敵(雑魚/Fast/ボス)を計算してPlayerに伝える。
+     * 自機オプションのホーミング弾の目標として使われる。
+     */
+    private void updateNearestTarget() {
+        if (player == null) return;
+        double bestDist = Double.MAX_VALUE;
+        double tx = -1, ty = -1;
+        for (Enemy e : enemies) {
+            if (!e.active || e.isDefeated()) continue;
+            double d = MathUtil.distance(player.x, player.y, e.x, e.y);
+            if (d < bestDist) { bestDist = d; tx = e.x; ty = e.y; }
+        }
+        for (FastEnemy fe : fastEnemies) {
+            if (!fe.active || fe.isDefeated()) continue;
+            double d = MathUtil.distance(player.x, player.y, fe.x, fe.y);
+            if (d < bestDist) { bestDist = d; tx = fe.x; ty = fe.y; }
+        }
+        if (boss != null && !boss.isDefeated()) {
+            double d = MathUtil.distance(player.x, player.y, boss.x, boss.y);
+            if (d < bestDist) { bestDist = d; tx = boss.x; ty = boss.y; }
+        }
+        player.setNearestEnemy(tx, ty);
     }
 
     // ===================== BOMB DAMAGE =====================
@@ -825,7 +854,8 @@ public class GamePanel extends JPanel implements Runnable {
 
             if (MathUtil.distance(item.x, item.y, player.x, player.y) < player.getHitboxRadius() + item.getRadius()) {
                 if (item.getType() == Item.ItemType.POWER) {
-                    player.addPower(20);
+                    // P値スケールが0〜125なので 1個=+5(満タンまで25個)
+                    player.addPower(5);
                 } else {
                     player.addScore(100);
                 }

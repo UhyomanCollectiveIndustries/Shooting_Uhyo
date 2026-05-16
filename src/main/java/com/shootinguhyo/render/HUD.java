@@ -80,12 +80,21 @@ public class HUD {
         for (int i = 0; i < player.getBombs(); i++) bombs.append("◆");
         g.drawString(bombs.toString(), x, y + 16);
 
-        // POWER：0〜400を0.00〜4.00として小数点表記に。見栄え目的の見せ方
+        // POWER：0〜125のP値を整数で表示。次の閾値マークも併記する
         y += 40;
         g.setColor(new Color(200, 180, 255));
         g.drawString("POWER", x, y);
+        int p = player.getPower();
         g.setColor(Color.WHITE);
-        g.drawString(String.format("%.2f", player.getPower() / 100.0), x, y + 16);
+        g.drawString(String.format("%3d / 125", p), x, y + 16);
+        // 閾値到達ドット(10/20/50/125)
+        int dotY = y + 24;
+        int[] tiers = {10, 20, 50, 125};
+        for (int i = 0; i < tiers.length; i++) {
+            boolean reached = p >= tiers[i];
+            g.setColor(reached ? new Color(255, 220, 100) : new Color(80, 70, 110));
+            g.fillOval(x + i * 14, dotY, 8, 8);
+        }
 
         // GRAZE：弾を掠った回数
         y += 40;

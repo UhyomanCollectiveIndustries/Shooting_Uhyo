@@ -49,6 +49,29 @@ public class Player extends Entity {
     private int bombFrames = 0;        // ボム発動中の残り時間
     private boolean bombing = false;
 
+    /** 自機オプション(アタッチメント)の状態。キャラ実装側が位置と発射タイミングを制御する。 */
+    public static final class OptionState {
+        /** 描画用の絶対座標(キャラ側で毎フレーム書き換える)。 */
+        public double x, y;
+        /** 自前のクールダウン(キャラ側で減算/再装填する)。 */
+        public int fireCooldown;
+        /** trueなら描画される。 */
+        public boolean active;
+    }
+    public final OptionState leftOption = new OptionState();
+    public final OptionState rightOption = new OptionState();
+
+    /** ホーミング弾用：最寄りの敵(GamePanel側から毎フレーム更新)。-1なら無効。 */
+    private double nearestEnemyX = -1;
+    private double nearestEnemyY = -1;
+    public void setNearestEnemy(double tx, double ty) {
+        this.nearestEnemyX = tx;
+        this.nearestEnemyY = ty;
+    }
+    public boolean hasNearestEnemy() { return nearestEnemyY >= 0; }
+    public double getNearestEnemyX() { return nearestEnemyX; }
+    public double getNearestEnemyY() { return nearestEnemyY; }
+
     // 撃った弾はここにためて、GamePanelが回収・全体リストへ移動する設計。
     // → 自機自身がゲーム全体の弾リストを持たなくて済むので、結合度が低くなる。
     private List<PlayerBullet> newBullets = new ArrayList<>();
@@ -109,6 +132,12 @@ public class Player extends Entity {
             shootCooldown = 5; // 5フレーム間は次の発射不可
         }
         if (shootCooldown > 0) shootCooldown--;
+
+        // オプション(アタッチメント)の更新は毎フレーム呼ぶ。
+        // キャラ実装側で active/位置/発射タイミングを決める。
+        if (character != null) {
+            character.updateOptions(this, focus, newBullets);
+        }
 
         // Xキー押下でボム発動 (押しっぱなしで連発防止のためisJustPressedを使用)
         if (input.isJustPressed(KeyEvent.VK_X) && bombs > 0 && bombFrames <= 0) {
@@ -227,7 +256,9 @@ public class Player extends Entity {
         return bullets;
     }
 
-    public void addPower(int amount) { power = Math.min(400, power + amount); } // 上限400で頭打ち
+    /** パワー上限。P=125 が最大(東方EoSDライク)。 */
+    public static final int POWER_MAX = 125;
+    public void addPower(int amount) { power = Math.min(POWER_MAX, power + amount); }
     public void addScore(long amount) { score += amount; }
     public void addGraze(int amount) { graze += amount; }
 
@@ -267,6 +298,7 @@ public class Player extends Entity {
         // キャラが設定されていればドット絵を描画、なければ従来の三角形
         if (character != null) {
             character.getInGameSprite().draw(g, x, y, 2);
+            character.drawOptions(this, g);
             return;
         }
 

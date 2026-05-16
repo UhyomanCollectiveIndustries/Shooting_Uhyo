@@ -1,10 +1,12 @@
 package com.shootinguhyo.character;
 
+import com.shootinguhyo.entity.Player;
 import com.shootinguhyo.entity.bullet.PlayerBullet;
 import com.shootinguhyo.graphics.ImageLoader;
 import com.shootinguhyo.graphics.PixelSprite;
 
 import java.awt.Color;
+import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.List;
@@ -99,24 +101,40 @@ public class Uhyoman implements PlayerCharacter {
     @Override
     public double getHitboxRadius() { return 3.5; }
 
+    /** 自機ショットの基本ダメージ。 */
+    private static final int BASE_DAMAGE = 10;
+
     /**
-     * 通常ショットの生成。広く扇状に飛ぶ弾を作る。
-     * TODO: パワーに応じてホーミング弾を追加する。
+     * パワー値から本数を決める。
+     *   P<10 :3, P>=10:4, P>=20:5, P>=50:6, P>=125:7
+     */
+    private static int waysForPower(int power) {
+        if (power >= 125) return 7;
+        if (power >= 50)  return 6;
+        if (power >= 20)  return 5;
+        if (power >= 10)  return 4;
+        return 3;
+    }
+
+    /**
+     * 通常ショットの生成。本数はパワーで増える。
      */
     @Override
     public List<PlayerBullet> createShot(double x, double y, int power, boolean focus) {
         List<PlayerBullet> bullets = new ArrayList<>();
-        int dmg = 10;
+        int dmg = BASE_DAMAGE;
         double speed = 12.0;
 
         if (focus) {
-            // 集中射撃(直進3発)
-            for (int i = -1; i <= 1; i++) {
-                bullets.add(new PlayerBullet(x + i * 3, y - 10, 0, -speed, dmg));
+            // フォーカス: 集中して直進する縦並びショット
+            int ways = waysForPower(power);
+            for (int i = 0; i < ways; i++) {
+                double offsetX = (i - (ways - 1) / 2.0) * 3;
+                bullets.add(new PlayerBullet(x + offsetX, y - 10, 0, -speed, dmg));
             }
         } else {
-            // 扇状(本数はパワーで増加)
-            int ways = 3 + (power / 100);
+            // 通常: 扇状に広がる
+            int ways = waysForPower(power);
             double spread = Math.toRadians(10);
             for (int i = 0; i < ways; i++) {
                 double angle = -Math.PI / 2 + spread * (i - (ways - 1) / 2.0);
@@ -125,5 +143,81 @@ public class Uhyoman implements PlayerCharacter {
             }
         }
         return bullets;
+    }
+
+    /**
+     * オプション(左右のアタッチメント)の毎フレーム更新。
+     * <ul>
+     *   <li>P>=20 で起動。左右に固定で出る</li>
+     *   <li>最寄り敵に向けてホーミング弾を自動発射(攻撃力は通常の半分)</li>
+     *   <li>P>=50: 発射レート短縮</li>
+     *   <li>P>=125: 発射レートさらに短縮 + 2発同時発射</li>
+     * </ul>
+     */
+    @Override
+    public void updateOptions(Player p, boolean focus, List<PlayerBullet> newBullets) {
+        int power = p.getPower();
+        boolean active = power >= 20;
+        p.leftOption.active = active;
+        p.rightOption.active = active;
+        if (!active) return;
+
+        // 位置(フォーカス時は少し内側に寄せる)
+        double sideOffset = focus ? 14 : 20;
+        p.leftOption.x  = p.x - sideOffset;
+        p.leftOption.y  = p.y + 4;
+        p.rightOption.x = p.x + sideOffset;
+        p.rightOption.y = p.y + 4;
+
+        // 発射パラメータ
+        int cooldown = power >= 125 ? 6 : power >= 50 ? 10 : 15;
+        int shotsPerFire = power >= 125 ? 2 : 1;
+        int dmg = BASE_DAMAGE / 2; // 半分
+
+        if (p.leftOption.fireCooldown > 0)  p.leftOption.fireCooldown--;
+        if (p.rightOption.fireCooldown > 0) p.rightOption.fireCooldown--;
+
+        fireOption(p, p.leftOption,  cooldown, shotsPerFire, dmg, newBullets);
+        fireOption(p, p.rightOption, cooldown, shotsPerFire, dmg, newBullets);
+    }
+
+    private static void fireOption(Player p, Player.OptionState opt,
+                                   int cooldown, int shots, int dmg,
+                                   List<PlayerBullet> bullets) {
+        if (opt.fireCooldown > 0) return;
+        opt.fireCooldown = cooldown;
+
+        double speed = 11.0;
+        // 最寄り敵に向ける。無ければ真上
+        double tx = p.hasNearestEnemy() ? p.getNearestEnemyX() : opt.x;
+        double ty = p.hasNearestEnemy() ? p.getNearestEnemyY() : opt.y - 100;
+        double dx = tx - opt.x;
+        double dy = ty - opt.y;
+        // 真横〜下向きには撃たせない(上方向限定)
+        if (dy > -10) dy = -100;
+        double dist = Math.max(1.0, Math.sqrt(dx * dx + dy * dy));
+        double vx = dx / dist * speed;
+        double vy = dy / dist * speed;
+
+        for (int i = 0; i < shots; i++) {
+            double off = (i - (shots - 1) / 2.0) * 4;
+            bullets.add(new PlayerBullet(opt.x + off, opt.y, vx, vy, dmg));
+        }
+    }
+
+    /** オプションを赤いコアの白丸で描画。 */
+    @Override
+    public void drawOptions(Player p, Graphics2D g) {
+        drawOne(g, p.leftOption);
+        drawOne(g, p.rightOption);
+    }
+
+    private static void drawOne(Graphics2D g, Player.OptionState opt) {
+        if (!opt.active) return;
+        int r = 5;
+        g.setColor(new Color(255, 255, 255, 220));
+        g.fillOval((int) opt.x - r, (int) opt.y - r, r * 2, r * 2);
+        g.setColor(new Color(220, 80, 110));
+        g.fillOval((int) opt.x - 2, (int) opt.y - 2, 4, 4);
     }
 }

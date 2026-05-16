@@ -1,8 +1,10 @@
 package com.shootinguhyo.character;
 
+import com.shootinguhyo.entity.Player;
 import com.shootinguhyo.entity.bullet.PlayerBullet;
 import com.shootinguhyo.graphics.PixelSprite;
 
+import java.awt.Graphics2D;
 import java.util.List;
 
 /**
@@ -67,5 +69,36 @@ public interface PlayerCharacter {
      */
     default void onBomb(double x, double y) {
         // TODO: キャラ固有のボム演出を実装
+    }
+
+    /**
+     * 自機オプション(アタッチメント)の毎フレーム更新。
+     * <ul>
+     *   <li>パワー値に応じて player.leftOption / player.rightOption の active と位置を設定</li>
+     *   <li>クールダウンを進めて、撃てるなら newBullets に弾を追加</li>
+     * </ul>
+     * デフォルト実装は何もしない(オプション非対応キャラ向け)。
+     */
+    default void updateOptions(Player player, boolean focus, List<PlayerBullet> newBullets) {
+        // デフォルトは何もしない
+    }
+
+    /**
+     * 自機オプションの描画。Player.draw後に呼ばれる。
+     * デフォルト実装はactiveなオプションを小さな丸で描く汎用ビジュアル。
+     */
+    default void drawOptions(Player player, Graphics2D g) {
+        drawDefaultOption(g, player.leftOption);
+        drawDefaultOption(g, player.rightOption);
+    }
+
+    /** 汎用オプション描画(白い円＋色付きコア)。 */
+    static void drawDefaultOption(Graphics2D g, Player.OptionState opt) {
+        if (!opt.active) return;
+        int r = 5;
+        g.setColor(new java.awt.Color(255, 255, 255, 180));
+        g.fillOval((int) opt.x - r, (int) opt.y - r, r * 2, r * 2);
+        g.setColor(new java.awt.Color(120, 200, 255));
+        g.fillOval((int) opt.x - 2, (int) opt.y - 2, 4, 4);
     }
 }
