@@ -1,9 +1,11 @@
 package com.shootinguhyo.character;
 
 import com.shootinguhyo.entity.bullet.PlayerBullet;
+import com.shootinguhyo.graphics.ImageLoader;
 import com.shootinguhyo.graphics.PixelSprite;
 
 import java.awt.Color;
+import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -53,8 +55,21 @@ public class Uhyowoman implements PlayerCharacter {
 
     private static final String[] PORTRAIT_PATTERN = IN_GAME_PATTERN;
 
-    private final PixelSprite inGameSprite = new PixelSprite(IN_GAME_PATTERN, PALETTE);
-    private final PixelSprite portraitSprite = new PixelSprite(PORTRAIT_PATTERN, PALETTE);
+    // 自機絵(PNG)を優先。無ければドット絵にフォールバック。
+    // クラスパスのリソース解決は大文字小文字を区別するので複数候補を試す。
+    private static final BufferedImage CHAR_IMAGE = ImageLoader.loadAny(
+            "/character/uhyowoman.png", "/character/Uhyowoman.png",
+            "/character/uhyowoman.jpg", "/character/Uhyowoman.jpg"
+    );
+    private static final int IN_GAME_LOGICAL_HEIGHT  = 24;
+    private static final int PORTRAIT_LOGICAL_HEIGHT = 28;
+
+    private final PixelSprite inGameSprite = CHAR_IMAGE != null
+            ? new PixelSprite(CHAR_IMAGE, IN_GAME_LOGICAL_HEIGHT)
+            : new PixelSprite(IN_GAME_PATTERN, PALETTE);
+    private final PixelSprite portraitSprite = CHAR_IMAGE != null
+            ? new PixelSprite(CHAR_IMAGE, PORTRAIT_LOGICAL_HEIGHT)
+            : new PixelSprite(PORTRAIT_PATTERN, PALETTE);
 
     @Override
     public String getId() { return "uhyowoman"; }

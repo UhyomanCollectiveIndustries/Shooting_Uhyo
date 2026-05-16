@@ -923,9 +923,34 @@ public class GamePanel extends JPanel implements Runnable {
         g.setColor(new Color(230, 200, 220));
         g.drawString("~ 打倒ちくしょう ~", 30, ty + vert.length * 50 + 30);
 
-        // 中央：キャラ立ち絵(デフォルトキャラ)
-        PlayerCharacter portraitChar = CharacterRegistry.getDefault();
-        portraitChar.getPortraitSprite().draw(g, PANEL_WIDTH / 2.0 - 30, PANEL_HEIGHT / 2.0 + 10, 10);
+        // 中央：タイトル絵(PNG)があれば優先表示、無ければデフォルトキャラを表示
+        // クラスパスは大文字小文字を区別する。複数のファイル名候補を試す。
+        java.awt.image.BufferedImage titleArt = com.shootinguhyo.graphics.ImageLoader.loadAny(
+                "/title/title.png",        "/title/Title.png",
+                "/title/title_screen.png", "/title/Title_screen.png",
+                "/title/titlescreen.png",  "/title/TitleScreen.png",
+                "/title/title.jpg",        "/title/title_screen.jpg"
+        );
+        if (titleArt != null) {
+            // パネル中央寄りに、メニューと被らないサイズで配置
+            int maxW = PANEL_WIDTH - 230 - 130; // 左タイトル帯と右メニューを避ける
+            int maxH = PANEL_HEIGHT - 100;
+            double scale = Math.min(
+                    (double) maxW / titleArt.getWidth(),
+                    (double) maxH / titleArt.getHeight()
+            );
+            int drawW = (int) (titleArt.getWidth() * scale);
+            int drawH = (int) (titleArt.getHeight() * scale);
+            int drawX = 130 + (maxW - drawW) / 2;
+            int drawY = 60 + (maxH - drawH) / 2;
+            // 縁を少し暗く落として馴染ませる(影付き)
+            g.setColor(new Color(0, 0, 0, 80));
+            g.fillRoundRect(drawX - 4, drawY - 4, drawW + 8, drawH + 8, 8, 8);
+            g.drawImage(titleArt, drawX, drawY, drawW, drawH, null);
+        } else {
+            PlayerCharacter portraitChar = CharacterRegistry.getDefault();
+            portraitChar.getPortraitSprite().draw(g, PANEL_WIDTH / 2.0 - 30, PANEL_HEIGHT / 2.0 + 10, 10);
+        }
 
         // 右側：縦メニュー
         g.setFont(new Font("SansSerif", Font.BOLD, 18));
