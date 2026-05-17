@@ -2,10 +2,14 @@ package com.shootinguhyo.dialog;
 
 import com.shootinguhyo.character.CharacterRegistry;
 import com.shootinguhyo.character.PlayerCharacter;
+import com.shootinguhyo.graphics.BossArtRegistry;
 import com.shootinguhyo.graphics.PixelSprite;
 
+import java.awt.image.BufferedImage;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * DialogSamples：ボス戦前後の会話シーンのサンプル定義集。
@@ -27,14 +31,33 @@ import java.util.List;
 public final class DialogSamples {
     private DialogSamples() {}
 
+    /** 顔アイコンの論理サイズ(PixelSprite.scale倍率を掛けた表示サイズを決める基準)。 */
+    private static final int FACE_LOGICAL_HEIGHT = 24;
+
+    /** ボスのフェイスアイコンPixelSpriteをキャッシュ付きで取得。 */
+    private static final Map<Integer, PixelSprite> FACE_SPRITE_CACHE = new HashMap<>();
+    private static PixelSprite bossFaceSprite(int stageNo) {
+        if (FACE_SPRITE_CACHE.containsKey(stageNo)) return FACE_SPRITE_CACHE.get(stageNo);
+        BufferedImage img = BossArtRegistry.faceFor(stageNo);
+        PixelSprite sprite = img != null ? new PixelSprite(img, FACE_LOGICAL_HEIGHT) : null;
+        FACE_SPRITE_CACHE.put(stageNo, sprite);
+        return sprite;
+    }
+
+    /** 顔アイコンが用意されていなければプレイヤーの立ち絵を流用するフォールバック。 */
+    private static PixelSprite bossPortraitFor(int stageNo, PixelSprite fallback) {
+        PixelSprite face = bossFaceSprite(stageNo);
+        return face != null ? face : fallback;
+    }
+
     /** ステージ1のボス戦前会話(サンプル)。 */
     public static List<DialogLine> preBossStage1(PlayerCharacter playerChar) {
         PixelSprite playerPortrait = playerChar != null
                 ? playerChar.getPortraitSprite()
                 : CharacterRegistry.getDefault().getPortraitSprite();
 
-        // ボスの立ち絵がまだ専用に無いので、暫定で同じスプライトを使う(TODO)
-        PixelSprite bossPortrait = playerPortrait;
+        // ボスのフェイスアイコンがあればそれを使用、無ければプレイヤー立ち絵にフォールバック
+        PixelSprite bossPortrait = bossPortraitFor(1, playerPortrait);
 
         return Arrays.asList(
                 new DialogLine(playerChar.getDisplayName(),
@@ -55,7 +78,7 @@ public final class DialogSamples {
     /** ステージ1のボス撃破後会話(サンプル)。 */
     public static List<DialogLine> postBossStage1(PlayerCharacter playerChar) {
         PixelSprite playerPortrait = playerChar.getPortraitSprite();
-        PixelSprite bossPortrait = playerPortrait; // TODO: ボス専用立ち絵に差し替え
+        PixelSprite bossPortrait = bossPortraitFor(1, playerPortrait);
 
         return Arrays.asList(
                 new DialogLine("???",
@@ -75,7 +98,7 @@ public final class DialogSamples {
         if (stageNo == 1) return preBossStage1(playerChar);
 
         PixelSprite playerPortrait = playerChar.getPortraitSprite();
-        PixelSprite bossPortrait = playerPortrait;
+        PixelSprite bossPortrait = bossPortraitFor(stageNo, playerPortrait);
         String bossName = bossNameFor(stageNo);
 
         return Arrays.asList(
@@ -99,7 +122,7 @@ public final class DialogSamples {
         if (stageNo == 1) return postBossStage1(playerChar);
 
         PixelSprite playerPortrait = playerChar.getPortraitSprite();
-        PixelSprite bossPortrait = playerPortrait;
+        PixelSprite bossPortrait = bossPortraitFor(stageNo, playerPortrait);
         String bossName = bossNameFor(stageNo);
 
         if (stageNo >= 6) {

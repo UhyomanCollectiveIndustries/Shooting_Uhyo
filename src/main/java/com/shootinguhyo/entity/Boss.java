@@ -1,11 +1,13 @@
 package com.shootinguhyo.entity;
 
 import com.shootinguhyo.entity.bullet.EnemyBullet;
+import com.shootinguhyo.graphics.BossArtRegistry;
 import com.shootinguhyo.pattern.*;
 
 import java.awt.*;
 import java.awt.geom.Ellipse2D;
 import java.awt.geom.Path2D;
+import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -52,8 +54,22 @@ public class Boss extends Entity {
     private double waveAngle = 0;          // 波打ち角度
     private double radialAngle = 0;        // 全方位弾の角度
 
+    /** ステージ番号(画像レジストリの引き当てに使う)。0なら未設定。 */
+    private int stageNo = 0;
+    private BufferedImage bodyImage;
+
     public Boss(double x, double y) {
+        this(x, y, 0);
+    }
+
+    /** ステージ番号付きコンストラクタ(全身画像の引き当てに使う)。 */
+    public Boss(double x, double y, int stageNo) {
         super(x, y);
+        this.stageNo = stageNo;
+        // 全身画像はステージ番号があれば一度だけロードを試す
+        if (stageNo > 0) {
+            this.bodyImage = BossArtRegistry.bodyFor(stageNo);
+        }
         // 難易度に応じて各フェーズのHPをスケール
         double hpMul = com.shootinguhyo.config.Difficulty.current().enemyHpMul;
         phase1Hp = (int)(phase1Hp * hpMul);
@@ -63,6 +79,8 @@ public class Boss extends Entity {
         currentHp = phase1Hp;
         maxHp = phase1Hp;
     }
+
+    public int getStageNo() { return stageNo; }
 
     /** プレイヤー位置を教えてもらう(自機狙い弾用)。 */
     public void setPlayerPosition(double px, double py) {
@@ -273,6 +291,7 @@ public class Boss extends Entity {
      */
     @Override
     public void draw(Graphics2D g) {
+        // 装飾図形(花のような形)は常に背景として描く
         int size = 30;
         g.setColor(new Color(180, 50, 150));
         drawDecorativeShape(g, (int)x, (int)y, size + 5);
@@ -280,12 +299,20 @@ public class Boss extends Entity {
         g.setColor(new Color(220, 80, 180));
         drawDecorativeShape(g, (int)x, (int)y, size);
 
-        // 中央の本体(円)
-        g.setColor(new Color(255, 150, 220));
-        g.fill(new Ellipse2D.Double(x - 15, y - 15, 30, 30));
-
-        g.setColor(new Color(255, 220, 240));
-        g.fill(new Ellipse2D.Double(x - 8, y - 8, 16, 16));
+        if (bodyImage != null) {
+            // 全身画像があればそれを中央に描画(縦80pxに収まるよう拡大縮小)
+            int targetH = 96;
+            int targetW = (int) Math.round((double) bodyImage.getWidth() * targetH / bodyImage.getHeight());
+            int dx = (int) x - targetW / 2;
+            int dy = (int) y - targetH / 2;
+            g.drawImage(bodyImage, dx, dy, targetW, targetH, null);
+        } else {
+            // 画像が無ければ従来の円ボディにフォールバック
+            g.setColor(new Color(255, 150, 220));
+            g.fill(new Ellipse2D.Double(x - 15, y - 15, 30, 30));
+            g.setColor(new Color(255, 220, 240));
+            g.fill(new Ellipse2D.Double(x - 8, y - 8, 16, 16));
+        }
 
         drawHpBar(g);
     }

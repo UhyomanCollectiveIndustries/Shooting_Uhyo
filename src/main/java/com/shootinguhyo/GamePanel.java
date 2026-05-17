@@ -465,7 +465,7 @@ public class GamePanel extends JPanel implements Runnable {
     private void finishDialog() {
         if (dialogIsPreBoss) {
             // プリボス → ボス出現
-            boss = new Boss(192, 80);
+            boss = new Boss(192, 80, stageManager.getCurrentStage());
             audio.playBossBgm(stageManager.getCurrentStage());
             audio.playSe(AudioManager.Se.SPELL_DECLARE);
             gameState = GameState.BOSS_FIGHT;
