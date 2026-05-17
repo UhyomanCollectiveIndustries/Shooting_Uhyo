@@ -28,7 +28,7 @@ public class FastEnemy extends Entity {
     private double playerX, playerY;
     private List<EnemyBullet> newBullets = new ArrayList<>();
     private int score = 150;
-    private int hp = 75;
+    private int hp = 30;
 
     public FastEnemy(double x, double y, double vx, double vy) {
         super(x, y);
