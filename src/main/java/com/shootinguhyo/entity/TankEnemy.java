@@ -21,12 +21,11 @@ import java.awt.geom.Ellipse2D;
  *
  * 【TODO】
  *  - 専用ドット絵スプライト
- *  - 装甲ゲージを別途表示
  */
 public class TankEnemy extends Enemy {
 
     public TankEnemy(double x, double y) {
-        super(x, y, 800, 800); // HP=800、スコア=800
+        super(x, y, 800, 8000); // HP=800、スコア=8000
     }
 
     @Override

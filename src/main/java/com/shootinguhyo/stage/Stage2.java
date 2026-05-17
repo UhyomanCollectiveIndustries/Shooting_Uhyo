@@ -77,6 +77,10 @@ public class Stage2 implements Stage {
         }
     }
 
+    /** 中ボスはステージ中盤(約45秒地点)で出現。 */
+    @Override
+    public int midBossFrame() { return 2700; }
+
     @Override
     public boolean isBossTime(int frame) { return frame >= BOSS_FRAME; }
 

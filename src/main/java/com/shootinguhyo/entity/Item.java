@@ -27,6 +27,16 @@ public class Item extends Entity {
     private double vy = 1.5; // 落下速度(縦方向)
     private int frame = 0;
 
+    /** 自機への引き寄せモード(GamePanel側からtrueをセット)。 */
+    private boolean attractMode = false;
+    /** 引き寄せ対象の座標(GamePanel側が更新)。 */
+    private double attractTargetX, attractTargetY;
+    public void setAttract(boolean active, double tx, double ty) {
+        this.attractMode = active;
+        this.attractTargetX = tx;
+        this.attractTargetY = ty;
+    }
+
     public Item(double x, double y, ItemType type) {
         super(x, y);
         this.type = type;
@@ -41,10 +51,29 @@ public class Item extends Entity {
 
     public boolean isBig() { return big; }
 
-    /** 1フレーム更新：下方向に移動し、画面外で消滅。 */
+    /**
+     * 1フレーム更新。
+     * - attractMode=true: 自機座標に向かって直線的に高速移動(回収)
+     * - そうでなければ: 下に落下、画面外で消滅
+     */
     @Override
     public void update() {
         frame++;
+        if (attractMode) {
+            double dx = attractTargetX - x;
+            double dy = attractTargetY - y;
+            double dist = Math.sqrt(dx * dx + dy * dy);
+            double speed = 9.0; // 引き寄せ速度
+            if (dist <= speed) {
+                // ほぼ到達:座標を直接合わせて、当たり判定処理で取得させる
+                x = attractTargetX;
+                y = attractTargetY;
+            } else {
+                x += dx / dist * speed;
+                y += dy / dist * speed;
+            }
+            return;
+        }
         y += vy;
         if (y > 480) active = false;
     }

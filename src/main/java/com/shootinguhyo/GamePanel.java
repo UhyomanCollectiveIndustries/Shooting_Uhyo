@@ -78,6 +78,9 @@ public class GamePanel extends JPanel implements Runnable {
     private List<Item> items = new ArrayList<>();
     private List<Particle> particles = new ArrayList<>();
     private Boss boss;
+    private MidBoss midBoss;
+    private boolean midBossSpawned = false;
+    private boolean midBossDefeatedHandled = false;
 
     // ステージ進行
     private Stage currentStage;          // 現在のステージインスタンス
@@ -372,6 +375,9 @@ public class GamePanel extends JPanel implements Runnable {
         items.clear();
         particles.clear();
         boss = null;
+        midBoss = null;
+        midBossSpawned = false;
+        midBossDefeatedHandled = false;
         currentStage = stageManager.createCurrentStage();
         stageFrame = 0;
         bossSpawned = false;
@@ -464,10 +470,44 @@ public class GamePanel extends JPanel implements Runnable {
             audio.playSe(AudioManager.Se.SPELL_DECLARE);
             gameState = GameState.BOSS_FIGHT;
         } else {
-            // ポストボス → ステージクリア画面
+            // ポストボス → ステージクリア画面 + クリアボーナス加算
+            applyStageClearBonus();
             gameState = GameState.STAGE_CLEAR;
             endFrame = 0;
         }
+    }
+
+    /** 直近に加算したステージクリアボーナス(画面表示用)。 */
+    private long lastStageClearBonus = 0;
+    private long lastClearBonusBase = 0, lastClearBonusGraze = 0, lastClearBonusLives = 0;
+    private double lastClearBonusDifficultyMul = 1.0;
+
+    /**
+     * ステージクリアボーナスをスコアに加算。
+     * 式: (ステージ番号 * 100,000 + Graze * 1,000 + 残機 * 100,000) × 難易度倍率
+     */
+    private void applyStageClearBonus() {
+        int stageNo = stageManager.getCurrentStage();
+        long baseBonus = stageNo * 100_000L;
+        long grazeBonus = player.getGraze() * 1_000L;
+        long livesBonus = player.getLives() * 100_000L;
+        double diffMul = switch (options.getDifficulty()) {
+            case EASY    -> 0.7;
+            case NORMAL  -> 1.0;
+            case HARD    -> 1.3;
+            case LUNATIC -> 1.6;
+        };
+        long total = (long) ((baseBonus + grazeBonus + livesBonus) * diffMul);
+
+        lastStageClearBonus = total;
+        lastClearBonusBase = baseBonus;
+        lastClearBonusGraze = grazeBonus;
+        lastClearBonusLives = livesBonus;
+        lastClearBonusDifficultyMul = diffMul;
+
+        player.addScore(total);
+        // スコアボーナス監視は updateStageClear 側で1度走らせて1UPトリガを通す
+        scoreBonus.checkAndApply(player);
     }
 
     // ===================== PLAYING =====================
@@ -490,20 +530,34 @@ public class GamePanel extends JPanel implements Runnable {
             return;
         }
 
-        currentStage.update(stageFrame, enemies, fastEnemies);
+        // 中ボスが画面に出ている間は雑魚を出さない
+        boolean midBossActive = midBoss != null && !midBoss.isDefeated();
+        if (!midBossActive) {
+            currentStage.update(stageFrame, enemies, fastEnemies);
+        }
+
+        // 中ボス出現判定 — ステージ側のmidBossFrameを過ぎ、画面が掃けたら出現
+        int mbFrame = currentStage.midBossFrame();
+        if (mbFrame >= 0 && stageFrame >= mbFrame && !midBossSpawned
+                && enemies.isEmpty() && fastEnemies.isEmpty()) {
+            spawnMidBoss();
+        }
 
         for (FastEnemy fe : fastEnemies) {
             fe.setPlayerPosition(player.x, player.y);
         }
 
         updateEnemies();
+        updateMidBoss();
         updateBullets();
         updateItems();
         updateParticles();
         spellCardEffect.update();
+        handlePlayerDeath();
 
-        // 雑魚を片付けてからボス出現タイミングへ
-        if (currentStage.isBossTime(stageFrame) && !bossSpawned
+        // ボス出現は中ボスが片付いた後でないと進めない
+        boolean midBossClear = (mbFrame < 0) || (midBossSpawned && midBoss == null);
+        if (currentStage.isBossTime(stageFrame) && !bossSpawned && midBossClear
                 && enemies.isEmpty() && fastEnemies.isEmpty()) {
             bossSpawned = true;
             // プリボス会話に入る
@@ -577,6 +631,7 @@ public class GamePanel extends JPanel implements Runnable {
         updateItems();
         updateParticles();
         spellCardEffect.update();
+        handlePlayerDeath();
 
         hud.update(player.getScore());
         scoreBonus.checkAndApply(player);
@@ -667,6 +722,124 @@ public class GamePanel extends JPanel implements Runnable {
         }
     }
 
+    // ===================== MID BOSS =====================
+
+    /**
+     * 中ボスを召喚する。ステージ番号ごとに弾幕パターン・HP・色を変える。
+     */
+    private void spawnMidBoss() {
+        int stageNo = stageManager.getCurrentStage();
+        midBossSpawned = true;
+
+        // パターンと色をステージごとに変える
+        com.shootinguhyo.pattern.BulletPattern p;
+        Color color;
+        int hp;
+        int interval;
+        switch (stageNo) {
+            case 2 -> {
+                p = new com.shootinguhyo.pattern.SpiralPattern(0.22, 8, 2.2);
+                color = new Color(120, 220, 255);
+                hp = 3500; interval = 18;
+            }
+            case 3 -> {
+                p = com.shootinguhyo.pattern.SwitchbackPattern.standard(2.6);
+                color = new Color(255, 220, 100);
+                hp = 4500; interval = 22;
+            }
+            case 4 -> {
+                p = new com.shootinguhyo.pattern.SpiralPattern(0.28, 10, 2.4);
+                color = new Color(255, 150, 120);
+                hp = 5500; interval = 14;
+            }
+            case 5 -> {
+                p = com.shootinguhyo.pattern.ExpandingRingPattern.standard();
+                color = null;
+                hp = 6500; interval = 26;
+            }
+            case 6 -> {
+                p = new com.shootinguhyo.pattern.SpiralPattern(0.30, 12, 2.5);
+                color = new Color(220, 120, 220);
+                hp = 7500; interval = 12;
+            }
+            default -> { return; } // Stage1は中ボス無し
+        }
+        midBoss = new MidBoss(192, 90, hp, p, color,
+                com.shootinguhyo.entity.bullet.EnemyBullet.BulletSize.SMALL, interval);
+        // 既存の敵弾はクリア(余韻を消して仕切り直し)
+        enemyBullets.clear();
+        audio.playSe(AudioManager.Se.SPELL_DECLARE);
+    }
+
+    private void updateMidBoss() {
+        if (midBoss == null) return;
+        midBoss.update();
+        enemyBullets.addAll(midBoss.getAndClearNewBullets());
+        if (midBoss.isDefeated() && !midBossDefeatedHandled) {
+            midBossDefeatedHandled = true;
+            onMidBossDefeated();
+        }
+        // 退場処理: 撃破後にmidBossをnullに(描画停止)
+        if (midBoss.isDefeated()) {
+            // 派手な爆散
+            createExplosion((int) midBoss.x, (int) midBoss.y, 40, new Color(255, 200, 240));
+            midBoss = null;
+        }
+    }
+
+    /** 中ボス撃破時の報酬: 残機にゆとりがあればBomb回復、無ければ1UP。 */
+    private void onMidBossDefeated() {
+        audio.playSe(AudioManager.Se.SPELL_GET);
+        player.addScore(100_000);
+        // ご褒美アイテム: 残機が少ない or ボム所持が多い場合は1UP、それ以外はBomb回復
+        boolean giveLife = player.getLives() <= 2;
+        double dropX = midBoss.x;
+        double dropY = midBoss.y;
+        if (giveLife) {
+            // 1UP相当: 直接ライフを増やす + 大Pもおまけで撒く
+            player.addLife(1);
+            items.add(new Item(dropX, dropY, Item.ItemType.POWER, true));
+        } else {
+            player.addBomb(1);
+            items.add(new Item(dropX, dropY, Item.ItemType.POWER, true));
+        }
+        // 加えてポイントアイテムも数個
+        for (int i = 0; i < 4; i++) {
+            double a = Math.PI * 2 * i / 4.0;
+            items.add(new Item(dropX + Math.cos(a) * 10,
+                               dropY + Math.sin(a) * 10,
+                               Item.ItemType.POINT));
+        }
+    }
+
+    // ===================== PLAYER DEATH =====================
+
+    /**
+     * プレイヤーが今フレームに被弾死した場合の演出処理:
+     *  - 派手な爆散パーティクル
+     *  - その場にPアイテムを撒く(リカバリの足しに)
+     *  - SEはupdateBullets側で再生済み
+     */
+    private void handlePlayerDeath() {
+        if (player == null) return;
+        if (!player.consumeJustDied()) return;
+
+        // 1) 派手な爆散
+        createExplosion((int) player.x, (int) player.y, 60, new Color(255, 220, 220));
+        createExplosion((int) player.x, (int) player.y, 30, new Color(255, 140, 160));
+        createExplosion((int) player.x, (int) player.y, 20, new Color(120, 180, 255));
+
+        // 2) パワーをばらまく(通常P 6個 + 大P 1個)
+        for (int i = 0; i < 6; i++) {
+            double angle = Math.PI * 2 * i / 6.0 + rand.nextDouble() * 0.3;
+            double r = 14 + rand.nextDouble() * 10;
+            double ix = player.x + Math.cos(angle) * r;
+            double iy = player.y + Math.sin(angle) * r;
+            items.add(new Item(ix, iy, Item.ItemType.POWER, false));
+        }
+        items.add(new Item(player.x, player.y - 12, Item.ItemType.POWER, true));
+    }
+
     // ===================== NEAREST TARGET =====================
 
     /**
@@ -718,11 +891,21 @@ public class GamePanel extends JPanel implements Runnable {
                     fe.takeDamage(BOMB_BURST_DAMAGE_ENEMY);
                 }
             }
-            // ボスにも一撃
+            // ボス・中ボスにも一撃
             if (boss != null && !boss.isDefeated()) {
                 boss.takeDamage(BOMB_BURST_DAMAGE_BOSS);
             }
+            if (midBoss != null && !midBoss.isDefeated()) {
+                midBoss.takeDamage(BOMB_BURST_DAMAGE_BOSS);
+            }
             bombDamageTickFrame = 0;
+
+            // 画面上の敵弾をすべて点アイテムに変換
+            for (EnemyBullet eb : enemyBullets) {
+                if (!eb.active) continue;
+                items.add(new Item(eb.x, eb.y, Item.ItemType.POINT));
+            }
+            enemyBullets.clear();
         }
 
         // 継続ダメージ
@@ -828,6 +1011,14 @@ public class GamePanel extends JPanel implements Runnable {
                     hit = true;
                 }
             }
+            if (!hit && midBoss != null && !midBoss.isDefeated()) {
+                if (MathUtil.distance(pb.x, pb.y, midBoss.x, midBoss.y) < 22) {
+                    midBoss.takeDamage(pb.getDamage());
+                    player.addScore(30);
+                    audio.playSe(AudioManager.Se.ENEMY_HIT);
+                    hit = true;
+                }
+            }
             if (hit) pbi.remove();
         }
 
@@ -854,10 +1045,28 @@ public class GamePanel extends JPanel implements Runnable {
         }
     }
 
+    /** Pマックス時に自動回収ラインを発動するY座標(これより自機が上に行くと吸い込み)。 */
+    private static final int ITEM_AUTO_COLLECT_LINE_Y = 100;
+
     private void updateItems() {
+        // 引き寄せ条件:
+        //  (a) ボム発動中 → 全アイテム吸引
+        //  (b) パワー最大 かつ 自機がボーダーより上 → 全アイテム吸引
+        boolean bombingAttract = player != null && player.isBombing();
+        boolean powerMaxAttract = player != null
+                && player.getPower() >= Player.POWER_MAX
+                && player.y <= ITEM_AUTO_COLLECT_LINE_Y;
+        boolean attract = bombingAttract || powerMaxAttract;
+
         Iterator<Item> ii = items.iterator();
         while (ii.hasNext()) {
             Item item = ii.next();
+            // 引き寄せフラグの更新(毎フレーム自機の位置に追随)
+            if (attract) {
+                item.setAttract(true, player.x, player.y);
+            } else {
+                item.setAttract(false, 0, 0);
+            }
             item.update();
             if (!item.active) { ii.remove(); continue; }
 
@@ -1328,6 +1537,7 @@ public class GamePanel extends JPanel implements Runnable {
         for (FastEnemy fe : fastEnemies) if (fe.active) fe.draw(g);
 
         if (boss != null && !boss.isDefeated()) boss.draw(g);
+        if (midBoss != null && !midBoss.isDefeated()) midBoss.draw(g);
 
         for (EnemyBullet eb : enemyBullets) if (eb.active) eb.draw(g);
         for (PlayerBullet pb : playerBullets) if (pb.active) pb.draw(g);
@@ -1341,6 +1551,19 @@ public class GamePanel extends JPanel implements Runnable {
         }
 
         for (Particle p : particles) if (p.active) p.draw(g);
+
+        // Pマックス時の自動回収ライン(視覚案内: 黄色い破線)
+        if (player != null && player.getPower() >= Player.POWER_MAX) {
+            int ly = ITEM_AUTO_COLLECT_LINE_Y;
+            g.setColor(new Color(255, 220, 80, 160));
+            // 破線で描画
+            for (int dx = 0; dx < FIELD_WIDTH; dx += 12) {
+                g.fillRect(dx, ly, 8, 1);
+            }
+            g.setFont(new Font("Monospaced", Font.BOLD, 9));
+            g.setColor(new Color(255, 220, 120, 200));
+            g.drawString("AUTO COLLECT", 6, ly - 3);
+        }
 
         g.setColor(new Color(80, 60, 120));
         g.drawRect(0, 0, FIELD_WIDTH - 1, FIELD_HEIGHT - 1);
@@ -1398,17 +1621,38 @@ public class GamePanel extends JPanel implements Runnable {
         g.fillRect(0, 0, FIELD_WIDTH, FIELD_HEIGHT);
 
         int stageNo = stageManager.getCurrentStage();
-        g.setFont(new Font("SansSerif", Font.BOLD, 28));
+        g.setFont(new Font("SansSerif", Font.BOLD, 26));
         g.setColor(new Color(255, 220, 100));
         String msg = "STAGE " + stageNo + " CLEAR!";
         FontMetrics fm = g.getFontMetrics();
-        g.drawString(msg, (FIELD_WIDTH - fm.stringWidth(msg)) / 2, FIELD_HEIGHT / 2 - 30);
+        g.drawString(msg, (FIELD_WIDTH - fm.stringWidth(msg)) / 2, 70);
+
+        // クリアボーナスの内訳
+        int yLine = 110;
+        g.setFont(new Font("Monospaced", Font.PLAIN, 13));
+        g.setColor(new Color(220, 220, 255));
+        String b1 = String.format("Stage  Bonus :  %,10d", lastClearBonusBase);
+        String b2 = String.format("Graze  Bonus :  %,10d", lastClearBonusGraze);
+        String b3 = String.format("Lives  Bonus :  %,10d", lastClearBonusLives);
+        String b4 = String.format("Difficulty x :  %10.2f", lastClearBonusDifficultyMul);
+        g.drawString(b1, 50, yLine);
+        g.drawString(b2, 50, yLine + 20);
+        g.drawString(b3, 50, yLine + 40);
+        g.drawString(b4, 50, yLine + 60);
+
+        g.setColor(new Color(255, 200, 120));
+        g.drawLine(50, yLine + 75, FIELD_WIDTH - 50, yLine + 75);
+
+        g.setFont(new Font("Monospaced", Font.BOLD, 15));
+        g.setColor(new Color(255, 240, 120));
+        String total = String.format("CLEAR BONUS :  %,10d", lastStageClearBonus);
+        g.drawString(total, 50, yLine + 100);
 
         g.setFont(new Font("SansSerif", Font.PLAIN, 16));
         g.setColor(Color.WHITE);
-        String score = "Score: " + player.getScore();
+        String score = "Score: " + String.format("%,d", player.getScore());
         fm = g.getFontMetrics();
-        g.drawString(score, (FIELD_WIDTH - fm.stringWidth(score)) / 2, FIELD_HEIGHT / 2 + 10);
+        g.drawString(score, (FIELD_WIDTH - fm.stringWidth(score)) / 2, yLine + 140);
 
         if (endFrame > 120) {
             g.setFont(new Font("SansSerif", Font.PLAIN, 14));
@@ -1417,7 +1661,7 @@ public class GamePanel extends JPanel implements Runnable {
                     ? "Press ENTER for ending"
                     : "Press ENTER to continue";
             fm = g.getFontMetrics();
-            g.drawString(hint, (FIELD_WIDTH - fm.stringWidth(hint)) / 2, FIELD_HEIGHT / 2 + 40);
+            g.drawString(hint, (FIELD_WIDTH - fm.stringWidth(hint)) / 2, FIELD_HEIGHT - 30);
         }
     }
 

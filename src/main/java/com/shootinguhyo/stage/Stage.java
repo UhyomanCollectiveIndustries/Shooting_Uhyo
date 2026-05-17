@@ -37,4 +37,10 @@ public interface Stage {
     default java.awt.Color backgroundTint() {
         return new java.awt.Color(0, 0, 0, 0);
     }
+
+    /**
+     * 中ボス出現フレーム。負の値なら中ボス無し(Stage1向け)。
+     * デフォルトは無し。
+     */
+    default int midBossFrame() { return -1; }
 }

@@ -28,7 +28,7 @@ import java.awt.geom.Ellipse2D;
 public class HeavyEnemy extends Enemy {
 
     public HeavyEnemy(double x, double y) {
-        super(x, y, 600, 800);
+        super(x, y, 2000, 150000);
     }
 
     @Override

@@ -233,17 +233,30 @@ public class Player extends Entity {
     public boolean isInvincible() { return invincibleFrames > 0; }
     public boolean isBombing() { return bombing; }
 
+    /** 被弾フラグ(死亡演出を1回だけ走らせるためにGamePanelから消費する)。 */
+    private boolean justDied = false;
+    public boolean consumeJustDied() {
+        if (!justDied) return false;
+        justDied = false;
+        return true;
+    }
+
+    /** ボム持ち数の初期値(被弾時もここまで戻す)。 */
+    public static final int BOMB_RESET_COUNT = 3;
+
     /**
-     * 被弾処理。残機-1とパワー半減。
+     * 被弾処理。残機-1、ボム数を初期値に戻し、パワーを半減する。
      * 無敵フレームを長めに付与してすぐ立て続けに死なないようにしている。
      */
     public void hit() {
         if (isInvincible()) return;
         lives--;
-        power = power / 2;     // ペナルティ：パワー半減
-        invincibleFrames = 180; // 3秒無敵
+        power = power / 2;       // ペナルティ: パワー半減
+        bombs = BOMB_RESET_COUNT; // 残機ごとにボム数を初期値に戻す
+        invincibleFrames = 180;   // 3秒無敵
         bombing = false;
         bombFrames = 0;
+        justDied = true;
     }
 
     /**

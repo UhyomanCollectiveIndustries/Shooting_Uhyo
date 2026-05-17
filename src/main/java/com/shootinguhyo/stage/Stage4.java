@@ -76,6 +76,9 @@ public class Stage4 implements Stage {
     }
 
     @Override
+    public int midBossFrame() { return 4200; }
+
+    @Override
     public boolean isBossTime(int frame) { return frame >= BOSS_FRAME; }
 
     @Override
