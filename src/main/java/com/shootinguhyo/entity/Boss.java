@@ -263,15 +263,69 @@ public class Boss extends Entity {
     public boolean isDefeated() { return phase == Phase.DEFEATED; }
 
     /**
-     * スペル名を返す。switch式で各フェーズに対応する名前を取り出す。
-     * 日本語はUnicodeエスケープで埋め込んでいる(ソースのエンコーディングに依存しないため)。
+     * スペル名を返す。
+     * <p>ステージ毎に「花札の役・札の名前」をテーマにし、
+     *  ステージが進むほど強い役(カス→短冊→タネ→三光→四光→五光)になる。</p>
      */
     public String getSpellName() {
-        return switch (phase) {
-            case SPELL1 -> "カス(1文)";
-            case SPELL2 -> "タネ(1文)";
-            case SPELL3 -> "短冊(1文)";
-            default -> "";
+        // 各ステージ × 各SPELLフェーズで個別の札名/役名を返す。
+        // 役の強さの目安: 1=カス, 2=短冊系, 3=タネ系, 4=三光/特殊役, 5=四光, 6=五光・最強
+        return switch (stageNo) {
+            case 1 -> switch (phase) {
+                case SPELL1 -> "札符『松にカス』";
+                case SPELL2 -> "札符『梅の短冊』";
+                case SPELL3 -> "松梅『初春の囃子』";
+                default -> "";
+            };
+            case 2 -> switch (phase) {
+                case SPELL1 -> "札符『桜に幕』";
+                case SPELL2 -> "短冊『青き紫陽花』";
+                case SPELL3 -> "藤鳥『時鳥の鳴音』";
+                default -> "";
+            };
+            case 3 -> switch (phase) {
+                case SPELL1 -> "種符『菖蒲の八橋』";
+                case SPELL2 -> "種符『牡丹の蝶舞』";
+                case SPELL3 -> "獣符『萩野の猪』";
+                default -> "";
+            };
+            case 4 -> switch (phase) {
+                case SPELL1 -> "酒符『花見で一杯』";
+                case SPELL2 -> "酒符『月見で一杯』";
+                case SPELL3 -> "三獣『猪鹿蝶』";
+                default -> "";
+            };
+            case 5 -> switch (phase) {
+                case SPELL1 -> "光符『三光奪取』";
+                case SPELL2 -> "雨光『雨の四光』";
+                case SPELL3 -> "四光『満ちる栄誉』";
+                default -> "";
+            };
+            case 6 -> switch (phase) {
+                case SPELL1 -> "光符『桐に鳳凰』";
+                case SPELL2 -> "光符『雨四光・嵐の宴』";
+                case SPELL3 -> "極光『五光・天上の煌』";
+                default -> "";
+            };
+            default -> switch (phase) {
+                case SPELL1 -> "札符『無銘の幻』";
+                case SPELL2 -> "札符『継ぎ札』";
+                case SPELL3 -> "役符『未完の役』";
+                default -> "";
+            };
+        };
+    }
+
+    /** ステージ毎のボス名(花札の月モチーフ)。DialogSamplesから参照される。 */
+    public static String bossNameFor(int stageNo) {
+        return switch (stageNo) {
+            case 1 -> "松鶴の番人 ハナサキ";
+            case 2 -> "桜幕の歌い手 サクラギ";
+            case 3 -> "牡丹の蝶舞 ボタンヒメ";
+            case 4 -> "月見の酒人 ススキ";
+            case 5 -> "雨四光の遣い ヤナギ";
+            case 6 -> "桐鳳の冠者 キリオウ";
+            default -> "???";
         };
     }
 

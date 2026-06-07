@@ -49,3 +49,5 @@ src/main/java/com/shootinguhyo/pictures/IMG_4475.jpg
 src/main/java/com/shootinguhyo/pictures/IMG_4741.jpg
 src/main/resources/bomb/uhyoman.jpg
 src/main/resources/bomb/uhyowoman.jpg
+src/main/resources/se/*.wav
+src/main/resources/se/*.mp3
