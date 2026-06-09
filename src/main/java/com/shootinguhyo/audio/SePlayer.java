@@ -1,5 +1,6 @@
 package com.shootinguhyo.audio;
 
+import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.AudioInputStream;
 import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.Clip;
@@ -14,7 +15,8 @@ import java.util.Set;
 /**
  * SePlayer：効果音(SE)再生。
  *
- * <p>クラスパス {@code /se/{name}.wav} を {@link Clip} にロードしてキャッシュ。
+ * <p>クラスパス {@code /se/{name}.wav} か {@code /se/{name}.mp3} を
+ *  {@link Clip} にロードしてキャッシュ。MP3は mp3spi 経由でPCMにデコード。
  *  毎回 {@code setFramePosition(0); start();} することで即座に再生する。</p>
  *
  * <p>同じSEがオーバーラップする場面では、再生中のClipを止めて頭から鳴らし直す。
@@ -24,6 +26,8 @@ import java.util.Set;
  * <p>ファイルが見つからない場合は1回ログを出して以後無音にする。</p>
  */
 public class SePlayer {
+    private static final String[] EXTENSIONS = { ".wav", ".mp3", ".WAV", ".MP3" };
+
     private int volume = 80;
     private final Map<String, Clip> cache = new HashMap<>();
     private final Set<String> missing = new HashSet<>();
@@ -55,25 +59,51 @@ public class SePlayer {
         Clip cached = cache.get(name);
         if (cached != null) return cached;
 
-        String path = "/se/" + name + ".wav";
-        try (InputStream in = getClass().getResourceAsStream(path)) {
-            if (in == null) {
-                missing.add(name);
-                System.out.println("[SE] file not found: " + path);
-                return null;
+        for (String ext : EXTENSIONS) {
+            String path = "/se/" + name + ext;
+            Clip c = tryLoad(path);
+            if (c != null) {
+                cache.put(name, c);
+                return c;
             }
+        }
+        missing.add(name);
+        System.out.println("[SE] file not found (.wav/.mp3): /se/" + name);
+        return null;
+    }
+
+    private Clip tryLoad(String resourcePath) {
+        try (InputStream in = getClass().getResourceAsStream(resourcePath)) {
+            if (in == null) return null;
             BufferedInputStream bin = new BufferedInputStream(in);
-            try (AudioInputStream ais = AudioSystem.getAudioInputStream(bin)) {
+            try (AudioInputStream rawIn = AudioSystem.getAudioInputStream(bin)) {
+                AudioInputStream pcmIn = toPcm(rawIn);
                 Clip clip = AudioSystem.getClip();
-                clip.open(ais);
-                cache.put(name, clip);
+                clip.open(pcmIn);
                 return clip;
             }
         } catch (Exception e) {
-            missing.add(name);
-            System.out.println("[SE] failed to load " + path + ": " + e.getMessage());
+            System.out.println("[SE] failed to load " + resourcePath + ": " + e.getMessage());
             return null;
         }
+    }
+
+    /** MP3 等の非PCMフォーマットを16bit signed PCMに変換。 */
+    private static AudioInputStream toPcm(AudioInputStream rawIn) {
+        AudioFormat raw = rawIn.getFormat();
+        if (raw.getEncoding().equals(AudioFormat.Encoding.PCM_SIGNED)
+         || raw.getEncoding().equals(AudioFormat.Encoding.PCM_UNSIGNED)) {
+            return rawIn;
+        }
+        AudioFormat pcm = new AudioFormat(
+                AudioFormat.Encoding.PCM_SIGNED,
+                raw.getSampleRate(),
+                16,
+                raw.getChannels(),
+                raw.getChannels() * 2,
+                raw.getSampleRate(),
+                false);
+        return AudioSystem.getAudioInputStream(pcm, rawIn);
     }
 
     private void applyVolume(Clip clip) {

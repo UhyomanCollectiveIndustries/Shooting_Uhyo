@@ -51,3 +51,5 @@ src/main/resources/bomb/uhyoman.jpg
 src/main/resources/bomb/uhyowoman.jpg
 src/main/resources/se/*.wav
 src/main/resources/se/*.mp3
+src/main/resources/bgm/*.mp3
+src/main/resources/bgm/*.wav

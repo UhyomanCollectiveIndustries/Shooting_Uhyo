@@ -1,5 +1,6 @@
 package com.shootinguhyo.audio;
 
+import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.AudioInputStream;
 import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.Clip;
@@ -12,18 +13,23 @@ import java.util.Set;
 /**
  * BgmPlayer：BGM再生。
  *
- * <p>クラスパス {@code /bgm/{name}.wav} を {@link Clip} でループ再生する。
+ * <p>クラスパス {@code /bgm/{name}.wav} か {@code /bgm/{name}.mp3} を
+ *  {@link Clip} でループ再生する。
+ *  MP3は mp3spi 経由でデコードしてPCMに変換してから Clip にロードする。
  *  ファイルが見つからない場合はログを出してフォールバック(何もしない)。</p>
  *
  * <p>同一のBGMが既に再生中の場合は再起動しない。
  *  別のBGMに切り替わるときは前のClipを停止+解放してから新規に開く。</p>
  */
 public class BgmPlayer {
+    /** 試行する拡張子。先頭から順に探索する。 */
+    private static final String[] EXTENSIONS = { ".wav", ".mp3", ".WAV", ".MP3" };
+
     private Clip currentClip;
     private String currentBgm;
     private int volume = 70;
-    /** 1度ロード失敗したリソースは再試行しないためのキャッシュ。 */
-    private final Set<String> missingResources = new HashSet<>();
+    /** 1度ロード失敗した名前は再試行しないためのキャッシュ。 */
+    private final Set<String> missingNames = new HashSet<>();
 
     /** BGMを再生開始(同名なら無視)。 */
     public void play(String name) {
@@ -34,15 +40,13 @@ public class BgmPlayer {
         stopInternal();
         currentBgm = name;
 
-        String path = "/bgm/" + name + ".wav";
-        if (missingResources.contains(path)) {
-            // 既に欠落確認済み。静かにスキップ。
+        if (missingNames.contains(name)) {
             return;
         }
-        Clip clip = loadClip(path);
+        Clip clip = loadAny(name);
         if (clip == null) {
-            missingResources.add(path);
-            System.out.println("[BGM] file not found: " + path);
+            missingNames.add(name);
+            System.out.println("[BGM] file not found (.wav/.mp3): /bgm/" + name);
             return;
         }
         currentClip = clip;
@@ -109,13 +113,25 @@ public class BgmPlayer {
 
     // ---------- 内部ユーティリティ ----------
 
+    /** 拡張子候補を順に試して見つかったファイルからClipを作る。 */
+    private Clip loadAny(String name) {
+        for (String ext : EXTENSIONS) {
+            String path = "/bgm/" + name + ext;
+            Clip clip = loadClip(path);
+            if (clip != null) return clip;
+        }
+        return null;
+    }
+
     private Clip loadClip(String resourcePath) {
         try (InputStream in = getClass().getResourceAsStream(resourcePath)) {
             if (in == null) return null;
             BufferedInputStream bin = new BufferedInputStream(in);
-            try (AudioInputStream ais = AudioSystem.getAudioInputStream(bin)) {
+            try (AudioInputStream rawIn = AudioSystem.getAudioInputStream(bin)) {
+                // MP3 などの非PCMフォーマットはPCM_SIGNEDへデコード変換する。
+                AudioInputStream pcmIn = AudioPcmDecoder.toPcm(rawIn);
                 Clip clip = AudioSystem.getClip();
-                clip.open(ais);
+                clip.open(pcmIn);
                 return clip;
             }
         } catch (Exception e) {
@@ -135,13 +151,40 @@ public class BgmPlayer {
     private void applyVolume(Clip clip) {
         FloatControl gain = getMasterGain(clip);
         if (gain == null) return;
-        // 線形音量(0-100)を gain (dB) に変換。0=完全無音、100=最大。
         float min = gain.getMinimum();
         float max = gain.getMaximum();
         float frac = Math.max(0.0001f, volume / 100f);
-        // 知覚的に下げ過ぎないよう、対数的にマッピング(0.0001→min, 1.0→max)
+        // 知覚的に下げ過ぎないよう、対数的にマッピング(0.0001→-80dB相当, 1.0→0dB)
         float db = (float) (Math.log10(frac) * 20.0);
         float value = Math.max(min, Math.min(max, db));
         try { gain.setValue(value); } catch (IllegalArgumentException ignored) {}
+    }
+
+    // ---------- 共通PCMデコード ----------
+
+    /**
+     * MP3 等の任意のAudioInputStreamを 16bit signed PCM にデコードする小道具。
+     * Clipはエンコード済みフォーマット(MP3等)を直接 open() できないため、
+     * 一度PCMに変換してから Clip.open(pcmIn) する必要がある。
+     */
+    private static final class AudioPcmDecoder {
+        static AudioInputStream toPcm(AudioInputStream rawIn) {
+            AudioFormat raw = rawIn.getFormat();
+            // 既にPCMならそのまま返す
+            if (raw.getEncoding().equals(AudioFormat.Encoding.PCM_SIGNED)
+             || raw.getEncoding().equals(AudioFormat.Encoding.PCM_UNSIGNED)) {
+                return rawIn;
+            }
+            // MP3 等のエンコードを16bit signed PCM に変換
+            AudioFormat pcm = new AudioFormat(
+                    AudioFormat.Encoding.PCM_SIGNED,
+                    raw.getSampleRate(),
+                    16,
+                    raw.getChannels(),
+                    raw.getChannels() * 2,
+                    raw.getSampleRate(),
+                    false);
+            return AudioSystem.getAudioInputStream(pcm, rawIn);
+        }
     }
 }
