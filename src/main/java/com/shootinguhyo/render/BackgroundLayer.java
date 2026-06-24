@@ -4,23 +4,15 @@ import java.awt.*;
 import java.util.Random;
 
 /**
- * BackgroundLayer：ステージ背景のアニメーションを担当するクラス(ひな型)。
+ * BackgroundLayer：ステージ背景のアニメーションを担当する1枚のレイヤー。
  *
  * 【役割】
- *  既存のGamePanelが持つ「星流れ」処理を切り出して独立クラスにし、
- *  ステージごとに違う背景アニメーションへ差し替えられるようにする。
+ *  「星流れ」のような粒の流れを独立して持つ。複数枚を流れる速さ違いで重ねると
+ *  「パララックススクロール」になり奥行きが出る({@link ParallaxBackground} がまとめる)。
  *
  * 【設計】
- *  - レイヤー(layer)を複数持ち、奥(layer=0)から手前(layer=N)へ描画
- *  - 各レイヤーで流れる速さを変えると「パララックススクロール」になり、奥行きが出る
- *
- * 【ステージ毎の例(TODO)】
- *  - Stage1 : 星空(現状の処理を流用)
- *  - Stage2 : 雲が流れる空
- *  - Stage3 : 夕焼け＋光の粒
- *  - Stage4 : 夜の森(横スクロール木々)
- *  - Stage5 : 雷雨(稲妻)
- *  - Stage6 : 宇宙＋オーロラ
+ *  - 各レイヤーは固有の速度帯(speedMin〜speedMax)・粒サイズ・色・明るさ帯を持つ
+ *  - 奥のレイヤーは遅く小さく暗め、手前のレイヤーは速く大きく明るめにする
  */
 public class BackgroundLayer {
 
@@ -32,21 +24,44 @@ public class BackgroundLayer {
     private final double[] speed;
     private final int[] brightness;
 
+    private final double speedMin, speedMax;
+    private final int dotSize;
+    private final int brightMin, brightMax;
+    /** 粒の色。nullなら明るさ(brightness)に基づくグレースケール。 */
+    private final Color color;
+
     private final Random rand = new Random();
 
     /**
-     * @param width 描画領域の幅
-     * @param height 描画領域の高さ
-     * @param particleCount 流す粒の数(星や雲など)
+     * 従来互換コンストラクタ(白〜灰のグレースケール星)。
      */
     public BackgroundLayer(int width, int height, int particleCount) {
-        this.width = width;
-        this.height = height;
-        this.particleCount = particleCount;
-        this.px = new double[particleCount];
-        this.py = new double[particleCount];
-        this.speed = new double[particleCount];
-        this.brightness = new int[particleCount];
+        this(width, height, particleCount, 0.3, 1.8, 1, 60, 240, null);
+    }
+
+    /**
+     * 詳細指定コンストラクタ。
+     * @param speedMin/speedMax 流れる速度の範囲(下方向px/フレーム)
+     * @param dotSize 粒の基本サイズ(px)。速い粒は+1される
+     * @param brightMin/brightMax 明るさ(0-255)の範囲
+     * @param color 粒の色(nullならグレースケール)
+     */
+    public BackgroundLayer(int width, int height, int particleCount,
+                           double speedMin, double speedMax, int dotSize,
+                           int brightMin, int brightMax, Color color) {
+        this.width = Math.max(1, width);
+        this.height = Math.max(1, height);
+        this.particleCount = Math.max(0, particleCount);
+        this.speedMin = speedMin;
+        this.speedMax = Math.max(speedMin, speedMax);
+        this.dotSize = Math.max(1, dotSize);
+        this.brightMin = brightMin;
+        this.brightMax = Math.max(brightMin, brightMax);
+        this.color = color;
+        this.px = new double[this.particleCount];
+        this.py = new double[this.particleCount];
+        this.speed = new double[this.particleCount];
+        this.brightness = new int[this.particleCount];
         reset();
     }
 
@@ -55,8 +70,8 @@ public class BackgroundLayer {
         for (int i = 0; i < particleCount; i++) {
             px[i] = rand.nextInt(width);
             py[i] = rand.nextInt(height);
-            speed[i] = rand.nextDouble() * 1.5 + 0.3;
-            brightness[i] = rand.nextInt(180) + 60;
+            speed[i] = rand.nextDouble() * (speedMax - speedMin) + speedMin;
+            brightness[i] = rand.nextInt(Math.max(1, brightMax - brightMin + 1)) + brightMin;
         }
     }
 
@@ -71,12 +86,22 @@ public class BackgroundLayer {
         }
     }
 
-    /** 粒を点として描画。速い粒は2x2、遅い粒は1x1にして遠近感を出す。 */
+    /** 粒を描画。速い粒は1px大きくして遠近感を出す。 */
     public void draw(Graphics2D g) {
         for (int i = 0; i < particleCount; i++) {
             int b = brightness[i];
-            g.setColor(new Color(b, b, b));
-            int size = speed[i] > 1.2 ? 2 : 1;
+            if (color == null) {
+                g.setColor(new Color(b, b, b));
+            } else {
+                // 明るさを色に乗せる(暗い粒は色も沈む)。アルファで奥行きも表現。
+                float k = b / 255f;
+                g.setColor(new Color(
+                        (int) (color.getRed() * k),
+                        (int) (color.getGreen() * k),
+                        (int) (color.getBlue() * k),
+                        Math.min(255, b + 30)));
+            }
+            int size = speed[i] > (speedMin + speedMax) / 2 ? dotSize + 1 : dotSize;
             g.fillRect((int) px[i], (int) py[i], size, size);
         }
     }
