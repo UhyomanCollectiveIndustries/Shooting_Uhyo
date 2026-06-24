@@ -260,6 +260,20 @@ public class Player extends Entity {
     }
 
     /**
+     * コンティニュー時の復活処理。
+     * 残機とボムを初期値に戻し、しばらく無敵にして仕切り直す。
+     * パワー・スコア・グレイズは引き継ぐ(学園祭向けに緩めの仕様)。
+     */
+    public void continueRevive() {
+        lives = 3;
+        bombs = BOMB_RESET_COUNT;
+        invincibleFrames = 180; // 3秒無敵
+        bombing = false;
+        bombFrames = 0;
+        justDied = false;
+    }
+
+    /**
      * 撃った弾のリストを取り出して内部リストを空にする。
      * GamePanel側がフレームごとに呼んで、自機弾を全体管理リストへ移す。
      */
