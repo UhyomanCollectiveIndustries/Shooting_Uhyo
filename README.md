@@ -42,15 +42,8 @@
 
 ## 未実装なもの  
 - 背景・自機・敵・ボスのグラフィックのドット絵作り込み(現在は仮スプライト/図形描画)  
-
 - ボス専用立ち絵の差し替え(現在はプレイヤー立ち絵を流用)  
-- ボスとの会話のステージ別シナリオ作り込み(現在は共通テンプレ)  
-- エンディングのキャラ別分岐(現在は共通テキスト)  
-- BossのHPバー閾値による必殺技変化  
-- Bossキャラクターのアニメーション(SpriteAnimation の活用)  
-- ステージ背景のパララックス強化(BackgroundLayer の複数レイヤー化)  
-- セーブ/ロード(GameOptions.save/load の実装)  
-- コンテニューができるようにする  
+- Bossキャラクターの多フレームアニメーション(SpriteAnimation の基盤は実装済み・差し替え用の連番ドット絵が未用意)  
 
 リプレイ/スコア/ミュージックルーム/エクストラは UI のみで、押下時に「未実装です」と表示するに留めています。  
 
@@ -72,8 +65,6 @@
 ### 設定 (config/)
 | ファイル | TODO |
 |---|---|
-| `GameOptions.java` | `save()`: Propertiesファイルへの書き出し |
-| `GameOptions.java` | `load()`: Propertiesファイルからの読み込み |
 | `GameOptions.java` | キーバインド変更機能 |
 | `GameOptions.java` | フルスクリーン切替 |
 | `GameOptions.java` | 弾密度を下げるなどのアクセシビリティ設定 |
@@ -93,7 +84,7 @@
 | ファイル | TODO |
 |---|---|
 | `BossSpriteSet.java` | ボス専用スプライトセットの実装 |
-| `SpriteAnimation.java` | アニメーション機能の実装・活用 |
+| `SpriteAnimation.java` | (実装済み) ループ/非ループ・フレーム別表示時間・完了コールバック |
 | `Sprites.java` | 仮スプライトを差分のある正式なドット絵に差し替え |
 
 ### ダイアログ (dialog/)
@@ -136,7 +127,7 @@
 | `OptionScreen.java` | 全画面切替 |
 | `OptionScreen.java` | 設定の即時保存(`GameOptions.save()`) |
 | `EndingScreen.java` | BGM再生(`BgmPlayer.play("ending")`)の呼び出し |
-| `EndingScreen.java` | キャラ別エンディング分岐 |
+| `EndingScreen.java` | キャラ別エンディング分岐 (実運用の `GamePanel.endingLines()` 側は実装済み) |
 | `GameOverScreen.java` | BGM再生(`BgmPlayer.play("gameover")`)の呼び出し |
 
 ### エフェクト (effect/)
