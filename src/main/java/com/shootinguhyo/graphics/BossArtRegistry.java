@@ -32,6 +32,8 @@ public final class BossArtRegistry {
         FACE_TRIED.put(stageNo, Boolean.TRUE);
 
         BufferedImage img = ImageLoader.loadAny(candidates(stageNo, "face"));
+        // 顔アイコンは切り取り位置がバラバラでも中央に揃うよう自動センタリングする
+        if (img != null) img = ImageLoader.autoCenter(img);
         if (img != null) FACE_CACHE.put(stageNo, img);
         return img;
     }
