@@ -212,19 +212,21 @@ public class Boss extends Entity {
 
     /** SPELL3：最終フェーズ。全方位弾＋スパイラル＋自機狙いの3種類同時。 */
     private void updateSpell3() {
+        int stage = spellStage();
         radialAngle += 0.05;
-        spiralAngle1 += 0.12;
+        spiralAngle1 += 0.12 + stage * 0.02;
 
         if (frame % 60 == 0) {
-            // 16方向の全方位弾(中サイズ・黄色)
-            RadialPattern rp = new RadialPattern(16, 3.5, radialAngle);
+            // 全方位弾。HPが減るほど密度UP(16→18→20→22方向)
+            RadialPattern rp = new RadialPattern(16 + stage * 2, 3.5, radialAngle);
             newBullets.addAll(rp.generate(x, y, EnemyBullet.BulletSize.MEDIUM, new Color(255, 220, 100)));
         }
         if (frame % 4 == 0) {
-            // 4方向のスパイラル(高頻度)
+            // スパイラル(高頻度)。終盤は4方向→6方向に増える
+            int arms = stage >= 2 ? 6 : 4;
             double spd = 3.0;
-            for (int i = 0; i < 4; i++) {
-                double a = spiralAngle1 + Math.PI / 2 * i;
+            for (int i = 0; i < arms; i++) {
+                double a = spiralAngle1 + Math.PI * 2 / arms * i;
                 newBullets.add(new EnemyBullet(x, y,
                         Math.cos(a) * spd, Math.sin(a) * spd,
                         EnemyBullet.BulletSize.SMALL, new Color(255, 255, 200)));
@@ -235,6 +237,17 @@ public class Boss extends Entity {
             AimedPattern ap = new AimedPattern(5, Math.toRadians(15), 4.0);
             newBullets.addAll(ap.generate(x, y, playerX, playerY,
                     EnemyBullet.BulletSize.SMALL, new Color(200, 255, 200)));
+        }
+        // 瀕死(25%以下)で最後の足掻き: 逆回転スパイラルを重ねる
+        if (stage >= 3 && frame % 6 == 0) {
+            spiralAngle2 -= 0.16;
+            double spd = 2.6;
+            for (int i = 0; i < 4; i++) {
+                double a = spiralAngle2 + Math.PI / 2 * i;
+                newBullets.add(new EnemyBullet(x, y,
+                        Math.cos(a) * spd, Math.sin(a) * spd,
+                        EnemyBullet.BulletSize.SMALL, new Color(255, 180, 120)));
+            }
         }
     }
 
