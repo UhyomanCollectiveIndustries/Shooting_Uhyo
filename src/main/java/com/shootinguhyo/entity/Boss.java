@@ -114,6 +114,24 @@ public class Boss extends Entity {
         y = 80 + Math.sin(frame * 0.02) * 20; // ±20pxで上下にゆらゆら
     }
 
+    /** 現在フェーズのHP残量比率(0.0〜1.0)。スペルの段階変化(必殺技の激化)に使う。 */
+    private double hpRatio() {
+        return maxHp > 0 ? Math.max(0.0, (double) currentHp / maxHp) : 0.0;
+    }
+
+    /**
+     * スペルカードのHP閾値段階を返す。
+     *  0 = 余裕(75%超)、1 = 中盤(50%〜75%)、2 = 終盤(25%〜50%)、3 = 瀕死(25%以下)。
+     * 段階が上がるほど弾幕が激しくなる(=必殺技がHPで変化する)。
+     */
+    private int spellStage() {
+        double r = hpRatio();
+        if (r > 0.75) return 0;
+        if (r > 0.50) return 1;
+        if (r > 0.25) return 2;
+        return 3;
+    }
+
     /** 弾発射パターンをフェーズに応じて切り替え。 */
     private void updatePattern() {
         switch (phase) {
@@ -141,37 +159,52 @@ public class Boss extends Entity {
      * 3フレームに1回、各3方向の弾を撃つので合計毎秒40発の弾密度。
      */
     private void updateSpell1() {
-        spiralAngle1 += 0.08;
-        spiralAngle2 -= 0.08;
+        int stage = spellStage();
+        // HPが減るほど腕の本数を増やし(3→4→5→6)、回転を速める
+        int arms = 3 + stage;
+        spiralAngle1 += 0.08 + stage * 0.015;
+        spiralAngle2 -= 0.08 + stage * 0.015;
 
         if (frame % 3 == 0) {
-            double spd = 2.5;
+            double spd = 2.5 + stage * 0.2;
             // 内側回転(ピンク)
-            for (int i = 0; i < 3; i++) {
-                double a = spiralAngle1 + Math.PI * 2 / 3 * i;
+            for (int i = 0; i < arms; i++) {
+                double a = spiralAngle1 + Math.PI * 2 / arms * i;
                 newBullets.add(new EnemyBullet(x, y,
                         Math.cos(a) * spd, Math.sin(a) * spd,
                         EnemyBullet.BulletSize.SMALL, new Color(255, 150, 200)));
             }
             // 逆回転(水色)
-            for (int i = 0; i < 3; i++) {
-                double a = spiralAngle2 + Math.PI * 2 / 3 * i;
+            for (int i = 0; i < arms; i++) {
+                double a = spiralAngle2 + Math.PI * 2 / arms * i;
                 newBullets.add(new EnemyBullet(x, y,
                         Math.cos(a) * spd, Math.sin(a) * spd,
                         EnemyBullet.BulletSize.SMALL, new Color(150, 200, 255)));
             }
         }
+        // 瀕死(25%以下)になると追い打ちの全方位弾が加わる
+        if (stage >= 3 && frame % 90 == 0) {
+            RadialPattern rp = new RadialPattern(12, 2.2, radialAngle);
+            newBullets.addAll(rp.generate(x, y, EnemyBullet.BulletSize.SMALL, new Color(255, 120, 160)));
+            radialAngle += 0.15;
+        }
     }
 
     /** SPELL2：波状弾＋たまに自機狙いの混合。波の角度を少しずつ変えてゆらぎを出す。 */
     private void updateSpell2() {
+        int stage = spellStage();
         waveAngle += 0.05;
-        if (frame % 20 == 0) {
-            WavePattern wp = new WavePattern(Math.toRadians(60), 7, waveAngle);
+        // HPが減るほど波の本数を増やし(7→8→9→10)、撃つ間隔を詰める
+        int waveCount = 7 + stage;
+        int waveInterval = Math.max(12, 20 - stage * 3);
+        if (frame % waveInterval == 0) {
+            WavePattern wp = new WavePattern(Math.toRadians(60), waveCount, waveAngle);
             newBullets.addAll(wp.generate(x, y, EnemyBullet.BulletSize.SMALL, new Color(255, 150, 180)));
         }
         if (frame % 60 == 30) {
-            AimedPattern ap = new AimedPattern(3, Math.toRadians(20), 3.0);
+            // 終盤(50%以下)は自機狙いが3way→5wayに増える
+            int aimWays = stage >= 2 ? 5 : 3;
+            AimedPattern ap = new AimedPattern(aimWays, Math.toRadians(20), 3.0);
             newBullets.addAll(ap.generate(x, y, playerX, playerY,
                     EnemyBullet.BulletSize.MEDIUM, new Color(255, 200, 220)));
         }
