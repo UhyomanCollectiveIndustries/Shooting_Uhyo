@@ -163,6 +163,7 @@ public class GamePanel extends JPanel implements Runnable {
 
         // 共通サービスの初期化
         options = new GameOptions();
+        options.load(); // 前回の設定(難易度・音量・ヒットボックス表示)を復元
         config = new GameConfig();
         audio = new AudioManager(options);
         stageManager = new StageManager();
