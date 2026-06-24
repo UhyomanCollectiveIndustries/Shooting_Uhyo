@@ -87,6 +87,10 @@ public class GamePanel extends JPanel implements Runnable {
     private int stageFrame = 0;          // ステージ開始からの経過フレーム
     private boolean bossSpawned = false; // 今のステージでボスを出したか
 
+    // コンティニュー(残機0からの復活)管理
+    private static final int MAX_CONTINUES = 3; // 1プレイで使える上限
+    private int continuesUsed = 0;
+
     // ゲーム共通サービス(ひな型からのコネクト)
     private GameOptions options;
     private GameConfig config;
@@ -102,11 +106,8 @@ public class GamePanel extends JPanel implements Runnable {
     private DialogScene dialogScene;
     private boolean dialogIsPreBoss = false;
 
-    // 背景の星
-    private double[] starX = new double[150];
-    private double[] starY = new double[150];
-    private double[] starSpeed = new double[150];
-    private int[] starBrightness = new int[150];
+    // 背景(パララックス多層スクロール)。タイトル/メニューは星空、プレイ中はステージ別テーマ色。
+    private com.shootinguhyo.render.ParallaxBackground background;
 
     private Random rand = new Random();
 
@@ -178,31 +179,21 @@ public class GamePanel extends JPanel implements Runnable {
     }
 
     private void initStars() {
-        for (int i = 0; i < starX.length; i++) {
-            starX[i] = rand.nextInt(FIELD_WIDTH);
-            starY[i] = rand.nextInt(FIELD_HEIGHT);
-            starSpeed[i] = rand.nextDouble() * 1.5 + 0.3;
-            starBrightness[i] = rand.nextInt(180) + 60;
-        }
+        // タイトル/メニュー用の汎用星空(3層パララックス)
+        background = com.shootinguhyo.render.ParallaxBackground.starfield(FIELD_WIDTH, FIELD_HEIGHT);
+    }
+
+    /** 背景をタイトル/メニュー用の星空に戻す。 */
+    private void useStarfieldBackground() {
+        background = com.shootinguhyo.render.ParallaxBackground.starfield(FIELD_WIDTH, FIELD_HEIGHT);
     }
 
     private void updateStars() {
-        for (int i = 0; i < starY.length; i++) {
-            starY[i] += starSpeed[i];
-            if (starY[i] > FIELD_HEIGHT) {
-                starY[i] = 0;
-                starX[i] = rand.nextInt(FIELD_WIDTH);
-            }
-        }
+        if (background != null) background.update();
     }
 
     private void drawStars(Graphics2D g) {
-        for (int i = 0; i < starX.length; i++) {
-            int b = starBrightness[i];
-            g.setColor(new Color(b, b, b));
-            int size = starSpeed[i] > 1.2 ? 2 : 1;
-            g.fillRect((int) starX[i], (int) starY[i], size, size);
-        }
+        if (background != null) background.draw(g);
     }
 
     public void startGame() {
@@ -352,6 +343,7 @@ public class GamePanel extends JPanel implements Runnable {
     private void startNewRun() {
         stageManager.reset();
         scoreBonus.reset();
+        continuesUsed = 0;
         initGameForCurrentStage(true);
         audio.playBgmForStage(stageManager.getCurrentStage());
         gameState = GameState.PLAYING;
@@ -380,6 +372,9 @@ public class GamePanel extends JPanel implements Runnable {
         midBossSpawned = false;
         midBossDefeatedHandled = false;
         currentStage = stageManager.createCurrentStage();
+        // ステージのテーマ色に合わせたパララックス背景に切り替え
+        background = com.shootinguhyo.render.ParallaxBackground.forStage(
+                stageManager.getCurrentStage(), FIELD_WIDTH, FIELD_HEIGHT);
         stageFrame = 0;
         bossSpawned = false;
         lastBossPhase = null;
@@ -694,6 +689,7 @@ public class GamePanel extends JPanel implements Runnable {
         if (endFrame > 600 && input.isJustPressed(KeyEvent.VK_ENTER)) {
             audio.playSe(AudioManager.Se.MENU_SELECT);
             audio.playTitleBgm();
+            useStarfieldBackground();
             gameState = GameState.TITLE;
         }
     }
@@ -707,10 +703,30 @@ public class GamePanel extends JPanel implements Runnable {
     private void updateGameOver() {
         endFrame++;
         updateStars();
-        if (endFrame > 120 && input.isJustPressed(KeyEvent.VK_ENTER)) {
+        if (endFrame <= 60) return; // 少し待ってから入力受付
+
+        boolean canContinue = continuesUsed < MAX_CONTINUES && player != null;
+        // Z または C でコンティニュー(残機を回復して現在ステージを再開)
+        if (canContinue && (input.isJustPressed(KeyEvent.VK_Z) || input.isJustPressed(KeyEvent.VK_C))) {
+            continuesUsed++;
+            doContinue();
+            return;
+        }
+        // Enter でタイトルへ戻る(コンティニューしない)
+        if (input.isJustPressed(KeyEvent.VK_ENTER)) {
             audio.playTitleBgm();
+            useStarfieldBackground();
             gameState = GameState.TITLE;
         }
+    }
+
+    /** コンティニュー実行：残機を回復し、現在ステージを最初からやり直す。 */
+    private void doContinue() {
+        audio.playSe(AudioManager.Se.MENU_SELECT);
+        player.continueRevive();
+        initGameForCurrentStage(false); // 敵・弾をリセットし現在ステージを作り直す(残機は維持)
+        audio.playBgmForStage(stageManager.getCurrentStage());
+        gameState = GameState.PLAYING;
     }
 
     /** 旧CLEAR状態(互換)。タイトルへ戻すだけ。 */
@@ -719,6 +735,7 @@ public class GamePanel extends JPanel implements Runnable {
         updateStars();
         if (endFrame > 120 && input.isJustPressed(KeyEvent.VK_ENTER)) {
             audio.playTitleBgm();
+            useStarfieldBackground();
             gameState = GameState.TITLE;
         }
     }
@@ -1608,12 +1625,35 @@ public class GamePanel extends JPanel implements Runnable {
         fm = g.getFontMetrics();
         g.drawString(s, (FIELD_WIDTH - fm.stringWidth(s)) / 2, FIELD_HEIGHT / 2 + 10);
 
-        if (endFrame > 120) {
-            g.setFont(new Font("SansSerif", Font.PLAIN, 14));
-            g.setColor(Color.WHITE);
-            String sub2 = "Press ENTER to return to title";
-            fm = g.getFontMetrics();
-            g.drawString(sub2, (FIELD_WIDTH - fm.stringWidth(sub2)) / 2, FIELD_HEIGHT / 2 + 40);
+        if (endFrame > 60) {
+            int remaining = MAX_CONTINUES - continuesUsed;
+            if (remaining > 0) {
+                // コンティニュー案内
+                g.setFont(new Font("SansSerif", Font.BOLD, 15));
+                g.setColor(new Color(255, 230, 120));
+                String cont = "Press Z to CONTINUE  (残り " + remaining + " 回)";
+                fm = g.getFontMetrics();
+                g.drawString(cont, (FIELD_WIDTH - fm.stringWidth(cont)) / 2, FIELD_HEIGHT / 2 + 44);
+
+                g.setFont(new Font("SansSerif", Font.PLAIN, 13));
+                g.setColor(new Color(200, 200, 220));
+                String sub2 = "Press ENTER to return to title";
+                fm = g.getFontMetrics();
+                g.drawString(sub2, (FIELD_WIDTH - fm.stringWidth(sub2)) / 2, FIELD_HEIGHT / 2 + 68);
+            } else {
+                // コンティニュー残無し
+                g.setFont(new Font("SansSerif", Font.PLAIN, 13));
+                g.setColor(new Color(255, 160, 160));
+                String none = "No continues left";
+                fm = g.getFontMetrics();
+                g.drawString(none, (FIELD_WIDTH - fm.stringWidth(none)) / 2, FIELD_HEIGHT / 2 + 44);
+
+                g.setFont(new Font("SansSerif", Font.PLAIN, 13));
+                g.setColor(Color.WHITE);
+                String sub2 = "Press ENTER to return to title";
+                fm = g.getFontMetrics();
+                g.drawString(sub2, (FIELD_WIDTH - fm.stringWidth(sub2)) / 2, FIELD_HEIGHT / 2 + 68);
+            }
         }
     }
 
@@ -1670,16 +1710,7 @@ public class GamePanel extends JPanel implements Runnable {
         g.setColor(Color.BLACK);
         g.fillRect(0, 0, PANEL_WIDTH, PANEL_HEIGHT);
 
-        String[] lines = {
-                "～ ENDING ～",
-                "",
-                "悪の組織アンチうひょは",
-                "うひょ星から去っていった…",
-                "",
-                "(あなたのエンディング演出をここに書く)",
-                "",
-                "Thanks for playing!"
-        };
+        String[] lines = endingLines();
 
         g.setFont(new Font("SansSerif", Font.PLAIN, 16));
         g.setColor(new Color(220, 220, 255));
@@ -1707,6 +1738,51 @@ public class GamePanel extends JPanel implements Runnable {
             fm = g.getFontMetrics();
             g.drawString(hint, (PANEL_WIDTH - fm.stringWidth(hint)) / 2, PANEL_HEIGHT - 30);
         }
+    }
+
+    /**
+     * 選択キャラクター別のエンディングテキストを返す。
+     * 共通の枠(導入・締め)に、キャラ固有の本文を挟む。
+     */
+    private String[] endingLines() {
+        PlayerCharacter pc = config != null ? config.getCharacter() : null;
+        String id = pc != null ? pc.getId() : "";
+        String name = pc != null ? pc.getDisplayName() : "うひょ";
+
+        String[] body = switch (id) {
+            case "uhyoman" -> new String[]{
+                    name + " は札の幻想を打ち破り、",
+                    "うひょ星に夜明けを取り戻した。",
+                    "",
+                    "広く弾けるその力は、",
+                    "迷えるみんなを照らす光になった。",
+                    "",
+                    "「さあ、帰ろう。みんなが待ってる」"
+            };
+            case "uhyowoman" -> new String[]{
+                    name + " の一点集中の魔弾は、",
+                    "五光の冠さえも貫いた。",
+                    "",
+                    "静かな微笑みの裏で、",
+                    "彼女はそっと札を一枚拾い上げる。",
+                    "",
+                    "「これは…記念に貰っておくわ」"
+            };
+            default -> new String[]{
+                    "悪の組織アンチうひょは",
+                    "うひょ星から去っていった…",
+                    "",
+                    name + " の戦いは、長く語り継がれる。"
+            };
+        };
+
+        java.util.List<String> all = new java.util.ArrayList<>();
+        all.add("～ " + name + " ENDING ～");
+        all.add("");
+        java.util.Collections.addAll(all, body);
+        all.add("");
+        all.add("Thanks for playing!");
+        return all.toArray(new String[0]);
     }
 
     /** 互換用(旧CLEAR状態)。 */
