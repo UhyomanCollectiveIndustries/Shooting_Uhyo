@@ -1,5 +1,12 @@
 package com.shootinguhyo.config;
 
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.nio.file.Files;
+import java.util.Properties;
+
 /**
  * GameOptions：ゲーム全体の設定値。
  *
@@ -9,10 +16,9 @@ package com.shootinguhyo.config;
  *
  * 【シングルトンっぽい使い方】
  *  ゲーム起動時に1つ作って、必要な箇所から参照する。
- *  本格的にはセーブ/ロード機能(JSON, Propertiesファイル)も追加したい。
+ *  設定は {@code ~/.shooting_uhyo/options.properties} に永続化される。
  *
  * 【TODO】
- *  - 設定ファイルへの保存・読み込み (java.util.Properties等)
  *  - キーバインド変更機能
  *  - フルスクリーン切替
  *  - 弾密度を下げる等のアクセシビリティ設定
